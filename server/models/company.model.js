@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const companySchema = new mongoose.Schema(
   {
-    name: {
+    company_name: {
       type: String,
       required: [true, "Company name is required"],
       trim: true,
@@ -29,11 +29,33 @@ const companySchema = new mongoose.Schema(
       required: [true, "Address is required"],
       maxlength: 500,
     },
+    plan: {
+      type: String,
+      enum: ["basic","pro","business","trial"],
+      default: "trial",
+    },
+    subscription_start_date: {
+      type: Date,
+      default : Date.now,
+    },
+    subscription_end_date: {
+      type: Date,
+    }
   },
   {
     timestamps: true, 
   }
 );
+
+companySchema.pre("save", function (next) {
+  if (this.isNew && this.plan === "trial") {
+    const start = this.subscription_start_date || Date.now();
+    this.subscription_end_date = new Date(
+      new Date(start).getTime() + 7 * 24 * 60 * 60 * 1000
+    );
+  }
+  next();
+});
 
 const Company = mongoose.model("Company", companySchema);
 
