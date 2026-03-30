@@ -18,7 +18,6 @@ const productSchema = new mongoose.Schema(
     sku: {
       type: String,
       required: [true, "SKU is required"],
-      unique: true,
       uppercase: true,
       trim: true,
     },
@@ -46,6 +45,8 @@ const productSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+productSchema.index({ company: 1, sku: 1 }, { unique: true });
 
 const Product = mongoose.model("Product", productSchema);
 

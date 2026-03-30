@@ -19,10 +19,17 @@ const userSchema = new mongoose.Schema(
 
     email: {
       type: String,
-      required: [true, "Email is required"],
       unique: true,
       lowercase: true,
       match: [/^\S+@\S+\.\S+$/, "Please use a valid email"],
+    },
+
+    phone: {
+      type: String,
+      required: [true, "Phone number is required"],
+      unique: true,
+      trim: true,
+      match: [/^[6-9]\d{9}$/, "Enter valid Indian phone number"]
     },
 
     password: {
@@ -44,17 +51,17 @@ const userSchema = new mongoose.Schema(
 );
 
 
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+userSchema.pre("save",async function (){
+  if(!this.isModified("password")){
+    return ;
+  }
 
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
-  next();
-});
-
+})
 
 userSchema.methods.matchPassword = async function (enteredPassword) {
-  return await bcrypt.cscscscpare(enteredPassword, this.password);
+  return await bcrypt.compare(enteredPassword, this.password);
 };
 
 const User = mongoose.model("User", userSchema);
