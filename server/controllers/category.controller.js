@@ -1,167 +1,243 @@
 import mongoose from "mongoose";
-import Category from "../models/category.model";
-import Company from "../models/company.model";
-
+import Category from "../models/category.model.js";
+import Product from "../models/product.model.js";
+import Company from "../models/company.model.js";
 
 const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
 
 const handleCategoryError = (res, error) => {
-    if (error.name === "ValidationError") {
-      const errors = Object.values(error.errors || {}).map((item) => item.message);
-      return res.status(400).json({
-        message: errors[0] || "Validation failed",
-        errors,
-      });
-    }
-    if (error.code === 11000) {
-        return res.status(400).json({
-            message: "Category already exists for this company",
-        });
-    }
-    console.error("Category error:", error);
-    return res.status(500).json({ message: "Internal server error" });
-}
-/** 
- * @description get all category for company
+  if (error.name === "ValidationError") {
+    const errors = Object.values(error.errors || {}).map(
+      (item) => item.message
+    );
+    return res.status(400).json({
+      success: false,
+      message: errors[0] || "Validation failed",
+      errors,
+    });
+  }
+
+  if (error.code === 11000) {
+    return res.status(400).json({
+      success: false,
+      message: "Category already exists for this company",
+    });
+  }
+
+  console.error("Category error:", error);
+  return res.status(500).json({
+    success: false,
+    message: "Internal server error",
+  });
+};
+
+/**
+ * @description Get all categories for a company
  * @route GET /api/category
  * @access Protected
  */
+
 export const getCategory = async (req, res) => {
-    try{
-        const query = { company : req.user.company };
+  try {
+    const companyId = req.user.company;
 
-        const category = await Category.find(query)
-        .sort({createdAt:-1});
+    const categories = await Category.aggregate([
+      {
+        $match: { company: new mongoose.Types.ObjectId(companyId) }
+      },
+      {
+        $lookup: {
+          from: "products", // collection name (IMPORTANT)
+          localField: "_id",
+          foreignField: "category",
+          as: "products"
+        }
+      },
+      {
+        $addFields: {
+          productCount: { $size: "$products" }
+        }
+      },
+      {
+        $project: {
+          products: 0 // remove full product array (important for performance)
+        }
+      },
+      {
+        $sort: { createdAt: -1 }
+      }
+    ]);
 
-        return res.status(200).json({
-            message:"Category fetched successfully",
-            count:category.length,
-            category:category.map(category=>({
-                id:category._id,
-                company:category.company,
-                name:category.name,
-                createdAt:category.createdAt,
-                updatedAt:category.updatedAt,
-            }))
-        })
-    } catch(error){
-        return handleCategoryError(res,error);
-    }
+    return res.status(200).json({
+      success: true,
+      count: categories.length,
+      data: categories.map((c) => ({
+        id: c._id,
+        name: c.name,
+        company: c.company,
+        productCount: c.productCount,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+      })),
+    });
+
+  } catch (error) {
+    return handleCategoryError(res, error);
+  }
 };
 
-
-/** 
- * @description create category for a company
+/**
+ * @description Create category
  * @route POST /api/category
  * @access Protected
  */
-
 export const createCategory = async (req, res) => {
-    try{
-        let { name } = req.body;
-        name = name?.trim();
+  try {
+    let { name } = req.body;
 
-        if(!name){
-            return res.status(400).json({
-                message : "Category Name is required."
-            });
-        }
-
-        const company = await Company.findById(req.user.company);
-        if(!company){
-            return res.status(404).json({
-                message:"Company not found"
-            })
-        }
-        const existingCategory = await Category.findOne({
-            company : req.user.company,
-            name:name,
-        })
-        if(existingCategory){
-            return res.status(400).json({
-                message:"Category already exists for this company"
-            })
-        }
-        const category = await Category.create({
-            company:req.user.company,
-            name:name
-        })
-        return res.status(200).json({
-            message:"Category created Successfully.",
-            category
-        })
-    } catch(error){
-        return handleCategoryError(res,error);
+    // Type validation
+    if (typeof name !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Name must be a string",
+      });
     }
-}
 
-/** 
- * @description update category for a company
- * @route POST /api/category/:id
+    // Normalize
+    name = name.trim().toLowerCase();
+
+    // Empty check
+    if (!name) {
+      return res.status(400).json({
+        success: false,
+        message: "Category name is required",
+      });
+    }
+
+    // Length validation
+    if (name.length < 2 || name.length > 50) {
+      return res.status(400).json({
+        success: false,
+        message: "Name must be between 2 and 50 characters",
+      });
+    }
+
+    // Create (rely on DB unique index)
+    const category = await Category.create({
+      company: req.user.company,
+      name,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Category created successfully",
+      data: category,
+    });
+  } catch (error) {
+    return handleCategoryError(res, error);
+  }
+};
+
+/**
+ * @description Update category
+ * @route PUT /api/category/:id
  * @access Protected
  */
-
 export const updateCategory = async (req, res) => {
-    try{
-        if(!isValidObjectId(req.params.id)){
-            return res.status(400).json({
-                message : "Invalid Category id"
-            })
-        }
-        const category = await Category.findOne({
-            _id:req.params.id,
-            company:req.user.company, 
-        });
+  try {
+    const id = req.params.id;
 
-        if(!category){
-            return res.status(404).json({
-                message:"Category not found"
-            })
-        }
-        const allowedFields = ["name"];
-        const updateFields = Object.keys(req.body).filter((field) => allowedFields.includes(field));
-        if(!updateFields.length){
-            return res.status(400).json({
-                message:"At least one valid field is required to update the category"
-            })
-        }
-        if(req.body.name !== undefined){
-            category.name = req.body.name?.trim();
-        }
-        await category.save();
-        return res.status(200).json({
-            message:"Category updated successfully",
-            category
-        })
-    } catch(error){
-        return handleCategoryError(res,error);
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Category ID",
+      });
     }
-}
 
-/** 
- * @description delete category for a company
- * @route POST /api/category/:id
+    let { name } = req.body;
+
+    if (typeof name !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Name must be a string",
+      });
+    }
+
+    name = name.trim().toLowerCase();
+
+    if (!name) {
+      return res.status(400).json({
+        success: false,
+        message: "Name cannot be empty",
+      });
+    }
+
+    if (name.length < 2 || name.length > 50) {
+      return res.status(400).json({
+        success: false,
+        message: "Name must be between 2 and 50 characters",
+      });
+    }
+
+    const updatedCategory = await Category.findOneAndUpdate(
+      {
+        _id: id,
+        company: req.user.company,
+      },
+      { $set: { name } },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedCategory) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Category updated successfully",
+      data: updatedCategory,
+    });
+  } catch (error) {
+    return handleCategoryError(res, error);
+  }
+};
+
+/**
+ * @description Delete category
+ * @route DELETE /api/category/:id
  * @access Protected
  */
-
 export const deleteCategory = async (req, res) => {
-    try {
-        if(!isValidObjectId(req.params.id)){
-            return res.status.json({message : "Invalid Category id."});
-        }
-        const category = await Category.findOneAndDelete({
-            _id : req.params.id,
-            company : req.user.company,
+  try {
+    const { id } = req.params;
 
-        })
-        if(!category){
-            return res.status(404).json({ message : "Category not found."});
-        }
-
-        return res.status(200).json({
-            message : "Category deleted successfully."
-        })
-    } catch(error){
-        return handleCategoryError(res,error);
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Category ID",
+      });
     }
-}
+
+    const deleted = await Category.findOneAndDelete({
+      _id: id,
+      company: req.user.company,
+    });
+
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Category deleted successfully",
+    });
+  } catch (error) {
+    return handleCategoryError(res, error);
+  }
+};

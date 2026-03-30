@@ -46,8 +46,8 @@ const productSchema = new mongoose.Schema(
   }
 );
 
+productSchema.index({ category: 1 });
 productSchema.index({ company: 1, sku: 1 }, { unique: true });
-
 const Product = mongoose.model("Product", productSchema);
 
 export default Product;
