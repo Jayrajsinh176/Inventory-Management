@@ -17,7 +17,6 @@ export const SUBSCRIPTION_PLANS = {
     maxUsers: Number.POSITIVE_INFINITY,
     features: ["full_access"],
   },
-  // Until a separate trial policy is defined, trial uses the same caps as basic.
   trial: {
     label: "Trial",
     maxProducts: 50,

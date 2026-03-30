@@ -28,6 +28,16 @@ const buildUserResponse = (user) => ({
   role: user.role,
   createdAt: user.createdAt,
 });
+const buildCompanyResponse = (company) => ({
+  id: company._id,
+  company_name: company.company_name,
+  email: company.email,
+  phone: company.phone,
+  address: company.address,
+  plan: company.plan,
+  subscription_start_date: company.subscription_start_date,
+  subscription_end_date: company.subscription_end_date
+});
 
 const getDuplicateFieldMessage = (error) => {
   const field = Object.keys(error.keyValue || {})[0];
@@ -48,14 +58,14 @@ const getValidationMessages = (error) =>
  * @access Public
  */
 export const registerUser = async (req, res) => {
+
   let company = null;
   let user = null;
-
   try {
   
-
     let { company_name, name, email, phone, password, address, role } = req.body;
-
+    company_name = company_name?.trim();
+    address = address?.trim();
     name = name?.trim();
     email = email?.trim().toLowerCase();
     phone = phone?.trim();
@@ -73,12 +83,6 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    if (role && !validRoles.includes(role)) {
-      return res.status(400).json({
-        message: 'Role must be either "admin" or "staff"',
-      });
-    }
-
     const existingUser = await User.findOne({
       $or: [{ email: email }, { phone: phone }],
     }).lean();
@@ -89,25 +93,16 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    
-    let resolvedRole = role || "staff";
-
-  
-    company_name = company_name?.trim();
-    address = address?.trim();
-    if (!company_name || !address) {
-      return res.status(400).json({
-        message: "Company name and address are required.",
-      });
-    }
     const existingCompany = await Company.findOne({
       $or: [{ email: email }, { phone: phone }],
     }).lean();
+
     if (existingCompany) {
       return res.status(400).json({
         message: existingCompany.email === email ? "Company email already exists" : "Company phone already exists",
       });
     }
+
     company = await Company.create({
       company_name: company_name,
       email: email,
@@ -128,12 +123,7 @@ export const registerUser = async (req, res) => {
       message: company ? "Account created successfully" : "User registered successfully",
       user: buildUserResponse(user),
       token: generateToken(user),
-      ...(company && {
-        company: {
-          id: company._id,
-          company_name: company.company_name,
-        },
-      }),
+      company:buildCompanyResponse(company),
     });
   } catch (error) {
     if (company?._id && !user?._id) {
@@ -201,6 +191,7 @@ export const loginUser = async (req, res) => {
       message: "Login successful",
       user: buildUserResponse(user),
       token: generateToken(user),
+      company:buildCompanyResponse(user.company),
     });
   } catch (error) {
     if (error.message === "JWT_SECRET is not configured") {

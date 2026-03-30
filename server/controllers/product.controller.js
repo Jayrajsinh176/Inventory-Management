@@ -54,6 +54,11 @@ const getScopedCategory = async (categoryId, companyId) => {
   }).select("_id name");
 };
 
+/** 
+ * @description get all products for company
+ * @route GET /api/products
+ * @access Protected
+ */
 export const getProducts = async (req, res) => {
   try {
     const query = { company: req.user.company };
@@ -109,6 +114,11 @@ export const getProductById = async (req, res) => {
   }
 };
 
+/**
+ * @description create product for company
+ * @route POST /api/products
+ * @access Protected
+ */
 export const createProduct = async (req, res) => {
   try {
     let { name, sku, category, price, stock } = req.body;
@@ -178,6 +188,11 @@ export const createProduct = async (req, res) => {
   }
 };
 
+/** 
+ * @description update product 
+ * @route PUT /api/products/:id
+ * @access Protected 
+ */
 export const updateProduct = async (req, res) => {
   try {
     if (!isValidObjectId(req.params.id)) {
@@ -260,6 +275,11 @@ export const updateProduct = async (req, res) => {
   }
 };
 
+/** 
+ * @description update product 
+ * @route DELETE /api/products/:id
+ * @access Protected 
+ */
 export const deleteProduct = async (req, res) => {
   try {
     if (!isValidObjectId(req.params.id)) {

@@ -47,14 +47,13 @@ const companySchema = new mongoose.Schema(
   }
 );
 
-companySchema.pre("save", function (next) {
+companySchema.pre("save", async function () {
   if (this.isNew && this.plan === "trial") {
     const start = this.subscription_start_date || Date.now();
     this.subscription_end_date = new Date(
       new Date(start).getTime() + 7 * 24 * 60 * 60 * 1000
     );
   }
-  next();
 });
 
 const Company = mongoose.model("Company", companySchema);
