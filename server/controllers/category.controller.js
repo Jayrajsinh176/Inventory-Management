@@ -1,9 +1,9 @@
 import mongoose from "mongoose";
 import Category from "../models/category.model";
 import Company from "../models/company.model";
-import e from "express";
 
 
+const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
 
 const handleCategoryError = (res, error) => {
     if (error.name === "ValidationError") {
@@ -102,7 +102,40 @@ export const createCategory = async (req, res) => {
  */
 
 export const updateCategory = async (req, res) => {
-    
+    try{
+        if(!isValidObjectId(req.params.id)){
+            return res.status(400).json({
+                message : "Invalid Category id"
+            })
+        }
+        const category = await Category.findOne({
+            _id:req.params.id,
+            company:req.user.company, 
+        });
+
+        if(!category){
+            return res.status(404).json({
+                message:"Category not found"
+            })
+        }
+        const allowedFields = ["name"];
+        const updateFields = Object.keys(req.body).filter((field) => allowedFields.includes(field));
+        if(!updateFields.length){
+            return res.status(400).json({
+                message:"At least one valid field is required to update the category"
+            })
+        }
+        if(req.body.name !== undefined){
+            category.name = req.body.name?.trim();
+        }
+        await category.save();
+        return res.status(200).json({
+            message:"Category updated successfully",
+            category
+        })
+    } catch(error){
+        return handleCategoryError(res,error);
+    }
 }
 
 /** 
@@ -112,5 +145,23 @@ export const updateCategory = async (req, res) => {
  */
 
 export const deleteCategory = async (req, res) => {
-    
+    try {
+        if(!isValidObjectId(req.params.id)){
+            return res.status.json({message : "Invalid Category id."});
+        }
+        const category = await Category.findOneAndDelete({
+            _id : req.params.id,
+            company : req.user.company,
+
+        })
+        if(!category){
+            return res.status(404).json({ message : "Category not found."});
+        }
+
+        return res.status(200).json({
+            message : "Category deleted successfully."
+        })
+    } catch(error){
+        return handleCategoryError(res,error);
+    }
 }
