@@ -25,7 +25,7 @@ const handleCategoryError = (res, error) => {
  * @route GET /api/category
  * @access Protected
  */
-export const getCategory = async (req, res) {
+export const getCategory = async (req, res) => {
     try{
         const query = { company : req.user.company };
 
