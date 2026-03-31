@@ -37,3 +37,13 @@ export const formatPlanProductLimit = (planName) => {
   const plan = getSubscriptionPlan(planName);
   return Number.isFinite(plan.maxProducts) ? String(plan.maxProducts) : "unlimited";
 };
+
+export const canAddUsersToPlan = (planName, currentCount) => {
+  const plan = getSubscriptionPlan(planName);
+  return currentCount < plan.maxUsers;
+}
+
+export const formatPlanUsersLimit = (planName) => {
+  const plan = getSubscriptionPlan(planName);
+  return Number.isFinite(plan.maxUsers) ? String(plan.maxUsers) : "unlimited";
+}
