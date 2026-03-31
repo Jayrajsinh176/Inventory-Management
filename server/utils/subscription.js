@@ -19,9 +19,9 @@ export const SUBSCRIPTION_PLANS = {
   },
   trial: {
     label: "Trial",
-    maxProducts: 50,
-    maxUsers: 1,
-    features: ["inventory"],
+    maxProducts: 500,
+    maxUsers: 5,
+    features: ["inventory","alerts"],
   },
 };
 

@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import User from "../models/users.model.js";
+import Company from "../models/company.model.js";
 // import subscription from "../utils/subscription.js";
 
 import { canAddUsersToPlan, formatPlanUsersLimit } from "../utils/subscription.js";
@@ -34,8 +35,8 @@ const handleStaffError = (res,error) => {
   return res.status(500).json({ message: "Internal server error" });
 }
 /** 
- * @description get all staff details
- * @route GET /api/staff
+ * @description get all user details
+ * @route GET /api/user
  * @access Protected
  */
 export const getUsersDetails = async (req,res) => {
@@ -60,16 +61,21 @@ export const getUsersDetails = async (req,res) => {
 
 
 /** 
- * @description add staff
- * @route POST /api/staff
+ * @description add user
+ * @route POST /api/user
  * @access Protected
  */ 
 export const addUsers = async (req,res) => {
     try {
-        const users = User.find({
-            company : req.user.company,
-        })
-        if(canAddUsersToPlan(req.user.company.plan,users.length)){
+        
+        const companyDetails = await Company.findById(req.user.company).select("plan");
+        console.log(companyDetails._id);
+        
+        const users = await User.find({
+            company : companyDetails._id,
+        }).select("-password").lean();
+        
+        if(canAddUsersToPlan(companyDetails,users.length)){
            let {name,email,phone,role} = req.body;
             name = name?.trim();
             email = email?.trim().toLowerCase();
@@ -128,7 +134,7 @@ export const addUsers = async (req,res) => {
                 data : user
             })
         }else{
-            return res.status(404).json({
+            return res.status(400).json({
                 success : false,
                 message : `You have reached the limit of ${formatPlanUsersLimit(req.user.company.plan)} users.`
             })
@@ -139,8 +145,8 @@ export const addUsers = async (req,res) => {
 }
 
 /** 
- * @description update staff details
- * @route PUT /api/staff/:id
+ * @description update user details
+ * @route PUT /api/user/:id
  * @access Protected
  */
 export const updateUsersDetails = async (req,res) => {
@@ -149,7 +155,7 @@ export const updateUsersDetails = async (req,res) => {
         if(!mongoose.Types.ObjectId.isValid(id)){
             return res.status(400).json({
                 success : false,
-                message : "Invalid staff id."
+                message : "Invalid user id."
             })
         }
 
@@ -199,8 +205,8 @@ export const updateUsersDetails = async (req,res) => {
 }
 
 /** 
- * @description delete staff
- * @route DELETE /api/staff/:id
+ * @description delete user
+ * @route DELETE /api/user/:id
  * @access Protected
  */ 
 export const deleteUser = async (req,res) => {
@@ -209,7 +215,7 @@ export const deleteUser = async (req,res) => {
         if(!mongoose.Types.ObjectId.isValid(id)){
             return res.status(400).json({
                 success : false,
-                message : "Invalid staff id."
+                message : "Invalid user id."
             })
         }
         const user = await User.findOneAndDelete({
