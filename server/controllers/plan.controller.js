@@ -1,4 +1,4 @@
-import { SUBSCRIPTION_PLANS } from "../utils/subscription";
+import { SUBSCRIPTION_PLANS } from "../utils/subscription.js";
 
 /** 
  * @description Get all Subscription plan Details

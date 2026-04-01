@@ -21,7 +21,7 @@ const generateToken = (user) =>
 
 const buildUserResponse = (user) => ({
   id: user._id,
-  company: String(user.company),
+  company: user.company.company_name,
   name: user.name,
   email: user.email,
   phone: user.phone,
@@ -73,12 +73,14 @@ export const registerUser = async (req, res) => {
 
     if (!company_name || !address || !name || !email || !phone || !password) {
       return res.status(400).json({
+        success : false,
         message: "All Fields are required",
       });
     }
 
     if (password.length < 6) {
       return res.status(400).json({
+        success : false,
         message: "Password must be at least 6 characters long",
       });
     }
@@ -89,6 +91,7 @@ export const registerUser = async (req, res) => {
 
     if (existingUser) {
       return res.status(400).json({
+        success : false,
         message: existingUser.email === email ? "Email already exists" : "Phone already exists",
       });
     }
@@ -99,6 +102,7 @@ export const registerUser = async (req, res) => {
 
     if (existingCompany) {
       return res.status(400).json({
+        success : false,
         message: existingCompany.email === email ? "Company email already exists" : "Company phone already exists",
       });
     }
@@ -120,6 +124,7 @@ export const registerUser = async (req, res) => {
     });
 
     return res.status(201).json({
+      success : true,
       message: company ? "Account created successfully" : "User registered successfully",
       user: buildUserResponse(user),
       token: generateToken(user),
@@ -147,7 +152,10 @@ export const registerUser = async (req, res) => {
 
 
     // console.error("Register error:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ 
+      success : false,
+      message: "Internal server error" 
+    });
   }
 };
 
@@ -165,6 +173,7 @@ export const loginUser = async (req, res) => {
     phone = phone?.trim();
     if ((!email && !phone) || !password) {
       return res.status(400).json({
+        success : false,
         message: "Email or phone and password are required",
       });
     }
@@ -178,16 +187,23 @@ export const loginUser = async (req, res) => {
     const user = await User.findOne(query).select("+password").populate("company");
 
     if (!user) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({ 
+        success : false,
+        message: "Invalid email or password" 
+      });
     }
 
     const isPasswordMatched = await user.matchPassword(password);
 
     if (!isPasswordMatched) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({ 
+        success : false,
+        message: "Invalid email or password" 
+      });
     }
 
     return res.status(200).json({
+      success : true,
       message: "Login successful",
       user: buildUserResponse(user),
       token: generateToken(user),
