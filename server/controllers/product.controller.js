@@ -12,7 +12,7 @@ const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
 
 const escapeRegex = (value) => {
   if (typeof value !== "string") return "";
-  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 const buildProductPayload = (product) => ({

@@ -175,7 +175,7 @@ export const loginUser = async (req, res) => {
         ? { email: email }
         : { phone: phone };
 
-    const user = await User.findOne(query).select("+password");
+    const user = await User.findOne(query).select("+password").populate("company");
 
     if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });

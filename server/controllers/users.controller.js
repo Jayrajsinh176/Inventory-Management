@@ -68,14 +68,14 @@ export const getUsersDetails = async (req,res) => {
 export const addUsers = async (req,res) => {
     try {
         
-        const companyDetails = await Company.findById(req.user.company).select("plan");
-        console.log(companyDetails._id);
+        const companyPlanDetails = await Company.findById(req.user.company).select("plan");
+        // console.log(companyPlanDetails._id);
         
         const users = await User.find({
-            company : companyDetails._id,
+            company : companyPlanDetails._id,
         }).select("-password").lean();
         
-        if(canAddUsersToPlan(companyDetails,users.length)){
+        if(canAddUsersToPlan(companyPlanDetails.plan,users.length)){
            let {name,email,phone,role} = req.body;
             name = name?.trim();
             email = email?.trim().toLowerCase();
@@ -127,7 +127,6 @@ export const addUsers = async (req,res) => {
                 role
             })
             
-            user.save();
             return res.status(201).json({
                 success : true,
                 message : "Staff added successfully.",
@@ -136,7 +135,7 @@ export const addUsers = async (req,res) => {
         }else{
             return res.status(400).json({
                 success : false,
-                message : `You have reached the limit of ${formatPlanUsersLimit(req.user.company.plan)} users.`
+                message : `You have reached the limit of ${formatPlanUsersLimit(companyPlanDetails.plan)} users.`
             })
         }
     } catch (error) {
@@ -159,7 +158,7 @@ export const updateUsersDetails = async (req,res) => {
             })
         }
 
-        const {name,email,phone,role} = req.body;
+        let {name,email,phone,role} = req.body;
         name = name?.trim();
         email = email?.trim().toLowerCase();
         phone = phone?.trim();
