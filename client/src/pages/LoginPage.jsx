@@ -16,8 +16,8 @@ const LoginPage = () => {
       {/* Auth form card */}
       <LoginForm />
 
-      {/* Footer links */}
-      <AuthFooter />
+      {/* Footer links
+      <AuthFooter /> */}
     </div>
   );
 };

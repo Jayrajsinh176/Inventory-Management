@@ -1,76 +1,97 @@
 const audiences = [
   {
-    title: 'Small businesses',
-    description: 'Affordable and intuitive management for those moving beyond spreadsheets.',
-    mockup: (
-      <div className="mt-4 p-4 bg-[#F8F9FA] rounded-lg border border-[#DEE2E6]">
-        <p className="text-[11px] text-[#6C757D] uppercase tracking-wider mb-2">Inventory Summary</p>
-        <div className="h-6 bg-[#DEE2E6] rounded animate-pulse mb-2"></div>
-        <div className="h-6 bg-[#DEE2E6] rounded animate-pulse w-3/4"></div>
-      </div>
-    ),
-    dark: false,
+    icon: 'storefront',
+    title: 'Retail Stores',
+    description: 'Sync your front-of-house with your back-office storage effortlessly.',
   },
   {
-    title: 'Retail shops',
-    description: 'Point-of-sale integration and localized stock alerts.',
-    mockup: null,
-    dark: true,
-    featured: true,
+    icon: 'shopping_cart',
+    title: 'E-Commerce',
+    description: 'Native integrations with Shopify, WooCommerce, and Amazon.',
   },
   {
-    title: 'E-commerce',
-    description: 'Multi-warehouse syncing for high-velocity sellers.',
-    mockup: null,
-    dark: false,
+    icon: 'factory',
+    title: 'Wholesale',
+    description: 'Manage bulk orders, tiered pricing, and large-scale shipping.',
   },
   {
-    title: 'Multi-channel sellers',
-    description: 'Unified inventory across Amazon, Shopify, and brick-and-mortar locations.',
-    dark: false,
-    hasButton: true,
+    icon: 'hub',
+    title: 'Multi-Channel',
+    description: 'Centralize inventory data from multiple physical and digital locations.',
   },
 ];
 
 const BuiltForSection = () => {
   return (
-    <section className="py-32 bg-white">
-      <div className="max-w-[1200px] mx-auto px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-hero-lg text-[#212529] mb-4">Built for Modern Commerce</h2>
-        </div>
+    <section id="built-for" style={{
+      padding: '96px 24px',
+      backgroundColor: '#0c0f10',
+      color: '#ffffff',
+      fontFamily: 'Inter, sans-serif',
+    }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+        <h2 style={{
+          textAlign: 'center',
+          fontFamily: 'Manrope, sans-serif',
+          fontWeight: 800,
+          fontSize: 'clamp(1.8rem, 3vw, 2.5rem)',
+          color: '#ffffff',
+          marginBottom: 64,
+          letterSpacing: '-0.02em',
+        }}>
+          Built for Every Model
+        </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: 20,
+        }} className="built-for-grid">
           {audiences.map((audience) => (
             <div
               key={audience.title}
-              className={`rounded-xl p-6 border transition-all duration-300 ${
-                audience.dark
-                  ? 'bg-black border-black text-white'
-                  : 'bg-white border-[#DEE2E6] text-[#212529] hover:border-[#ADB5BD]'
-              }`}
+              style={{
+                padding: 32,
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 8,
+                transition: 'background-color 0.2s',
+                cursor: 'default',
+              }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
             >
-              {audience.featured && (
-                <span className="inline-block mb-4 px-3 py-0.5 bg-white/10 rounded-full text-[11px] text-white font-medium tracking-wide">
-                  ★ Featured
-                </span>
-              )}
-              <h3 className={`text-[15px] font-semibold mb-2 ${audience.dark ? 'text-white' : 'text-[#212529]'}`}>
+              <span className="material-symbols-outlined" style={{
+                color: '#adc8f5',
+                fontSize: 32,
+                display: 'block',
+                marginBottom: 16,
+                fontVariationSettings: "'FILL' 1",
+              }}>{audience.icon}</span>
+              <h4 style={{
+                fontFamily: 'Manrope, sans-serif',
+                fontWeight: 700,
+                fontSize: 18,
+                color: '#ffffff',
+                marginBottom: 8,
+              }}>
                 {audience.title}
-              </h3>
-              <p className={`text-[13px] leading-relaxed ${audience.dark ? 'text-[#9CA3AF]' : 'text-[#6C757D]'}`}>
+              </h4>
+              <p style={{ fontSize: 14, color: '#737c81', lineHeight: 1.65 }}>
                 {audience.description}
               </p>
-              {audience.mockup}
-              {audience.hasButton && (
-                <button className="mt-4 w-full py-2 bg-black text-white rounded-lg text-[13px] font-semibold hover:bg-[#1A1A1A] transition-colors duration-200">
-                  Explore Solution
-                </button>
-              )}
             </div>
           ))}
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 1024px) {
+          .built-for-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+        @media (max-width: 640px) {
+          .built-for-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </section>
   );
 };

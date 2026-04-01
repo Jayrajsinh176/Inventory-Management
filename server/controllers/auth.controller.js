@@ -62,7 +62,7 @@ export const registerUser = async (req, res) => {
   let company = null;
   let user = null;
   try {
-  
+
     let { company_name, name, email, phone, password, address, role } = req.body;
     company_name = company_name?.trim();
     address = address?.trim();
@@ -123,7 +123,7 @@ export const registerUser = async (req, res) => {
       message: company ? "Account created successfully" : "User registered successfully",
       user: buildUserResponse(user),
       token: generateToken(user),
-      company:buildCompanyResponse(company),
+      company: buildCompanyResponse(company),
     });
   } catch (error) {
     if (company?._id && !user?._id) {
@@ -191,7 +191,7 @@ export const loginUser = async (req, res) => {
       message: "Login successful",
       user: buildUserResponse(user),
       token: generateToken(user),
-      company:buildCompanyResponse(user.company),
+      company: buildCompanyResponse(user.company),
     });
   } catch (error) {
     if (error.message === "JWT_SECRET is not configured") {

@@ -1,17 +1,35 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { loginUser } from '../../api';
 
 const LoginForm = () => {
-  const [email, setEmail] = useState('');
+  const navigate = useNavigate();
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // TODO: connect to authentication API
-    setTimeout(() => setLoading(false), 1500);
+    setError('');
+
+    try {
+      const isEmail = identifier.includes('@');
+
+      const response = await loginUser(
+        isEmail ? identifier : null, // email
+        !isEmail ? identifier : null, // phone
+        password
+      );
+
+      // Success - redirect to dashboard
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.message || 'Login failed. Please try again.');
+      setLoading(false);
+    }
   };
 
   return (
@@ -24,11 +42,21 @@ const LoginForm = () => {
         </p>
       </div>
 
+      {/* Error Alert */}
+      {error && (
+        <div className="mb-5 p-4 bg-[#F8D7DA] border border-[#F5C6CB] rounded-lg">
+          <p className="text-[13px] text-[#721C24]">
+            <i className="material-symbols-rounded text-[16px] align-middle mr-2">error</i>
+            {error}
+          </p>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Email Field */}
         <div>
           <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6C757D] mb-2">
-            Email Address
+            Email or Phone
           </label>
           <div className="relative">
             {/* Email icon */}
@@ -37,12 +65,13 @@ const LoginForm = () => {
             </span>
             <input
               id="login-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@organization.com"
+              type="text"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              placeholder="Email or Phone"
               required
-              className="w-full h-[44px] pl-10 pr-4 bg-[#F8F9FA] border border-[#DEE2E6] rounded-lg text-[14px] text-[#212529] placeholder-[#ADB5BD] focus:outline-none focus:border-black focus:bg-white focus:ring-[3px] focus:ring-black/8 transition-all duration-200"
+              disabled={loading}
+              className="w-full h-[44px] pl-10 pr-4 bg-[#F8F9FA] border border-[#DEE2E6] rounded-lg text-[14px] text-[#212529] placeholder-[#ADB5BD] focus:outline-none focus:border-black focus:bg-white focus:ring-[3px] focus:ring-black/8 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
         </div>
@@ -53,12 +82,12 @@ const LoginForm = () => {
             <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6C757D]">
               Security Key
             </label>
-            <a
-              href="#"
+            <Link
+              to="/forgot-password"
               className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6C757D] hover:text-[#212529] transition-colors"
             >
               Forgot?
-            </a>
+            </Link>
           </div>
           <div className="relative">
             {/* Lock icon */}
@@ -72,12 +101,14 @@ const LoginForm = () => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="w-full h-[44px] pl-10 pr-10 bg-[#F8F9FA] border border-[#DEE2E6] rounded-lg text-[14px] text-[#212529] placeholder-[#ADB5BD] focus:outline-none focus:border-black focus:bg-white focus:ring-[3px] focus:ring-black/8 transition-all duration-200"
+              disabled={loading}
+              className="w-full h-[44px] pl-10 pr-10 bg-[#F8F9FA] border border-[#DEE2E6] rounded-lg text-[14px] text-[#212529] placeholder-[#ADB5BD] focus:outline-none focus:border-black focus:bg-white focus:ring-[3px] focus:ring-black/8 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#ADB5BD] hover:text-[#6C757D] transition-colors"
+              disabled={loading}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#ADB5BD] hover:text-[#6C757D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? '🙈' : '👁'}
