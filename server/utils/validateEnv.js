@@ -1,6 +1,6 @@
 const requiredEnvVars = [
     "MONGO_URI",
-    "JWT_SECERT",
+    "JWT_SECRET",
     "PORT",
 ]
 

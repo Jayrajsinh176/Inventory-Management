@@ -90,6 +90,7 @@ export const getProducts = async (req, res) => {
       .lean();
 
     return res.status(200).json({
+      success: true,
       message: "Products fetched successfully",
       count: products.length,
       products: products.map(buildProductPayload),
@@ -102,7 +103,10 @@ export const getProducts = async (req, res) => {
 export const getProductById = async (req, res) => {
   try {
     if (!isValidObjectId(req.params.id)) {
-      return res.status(400).json({ message: "Invalid product id" });
+      return res.status(400).json({ 
+        success : false,
+        message: "Invalid product id" 
+      });
     }
 
     const product = await Product.findOne({
@@ -111,10 +115,14 @@ export const getProductById = async (req, res) => {
     }).populate("category", "name").lean();
 
     if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+      return res.status(404).json({ 
+        success : false,
+        message: "Product not found" 
+      });
     }
 
     return res.status(200).json({
+      success: true,
       message: "Product fetched successfully",
       product: buildProductPayload(product),
     });
@@ -137,37 +145,54 @@ export const createProduct = async (req, res) => {
 
     if (!name || !sku || !category || price === undefined) {
       return res.status(400).json({
+        success : false,
         message: "Name, SKU, category, and price are required",
       });
     }
 
     if (!isValidObjectId(category)) {
-      return res.status(400).json({ message: "Invalid category id" });
+      return res.status(400).json({ 
+        success : false,
+        message: "Invalid category id" 
+      });
     }
     if (typeof price !== "number") {
-      return res.status(400).json({ message: "Price must be a number" });
+      return res.status(400).json({ 
+        success : false,
+        message: "Price must be a number" 
+      });
     }
 
     if (stock !== undefined && typeof stock !== "number") {
-      return res.status(400).json({ message: "Stock must be a number" });
+      return res.status(400).json({ 
+        success : false,
+        message: "Stock must be a number" 
+      });
     }
     const company = await Company.findById(req.user.company).select("plan");
 
     if (!company) {
-      return res.status(404).json({ message: "Company not found" });
+      return res.status(404).json({ 
+        success : false,
+        message: "Company not found" 
+      });
     }
 
     const productCount = await Product.countDocuments({ company: req.user.company });
     if (!canAddProductToPlan(company.plan, productCount)) {
       const plan = getSubscriptionPlan(company.plan);
       return res.status(403).json({
+        success : false,
         message: `${plan.label} plan allows up to ${formatPlanProductLimit(company.plan)} products. Upgrade your plan to add more products.`,
       });
     }
 
     const existingCategory = await getScopedCategory(category, req.user.company);
     if (!existingCategory) {
-      return res.status(404).json({ message: "Category not found for this company" });
+      return res.status(404).json({ 
+        success : false,
+        message: "Category not found for this company" 
+      });
     }
 
     const product = await Product.create({
@@ -182,6 +207,7 @@ export const createProduct = async (req, res) => {
     await product.populate("category", "name");
 
     return res.status(201).json({
+      success : true,
       message: "Product created successfully",
       product: buildProductPayload(product),
       subscription: {
