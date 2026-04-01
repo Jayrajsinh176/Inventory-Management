@@ -1,0 +1,236 @@
+Inventory Management System (IMS) - Project Report 
+ 
+1. Project Overview 
+Title: 
+Multi-Tenant Subscription-Based Inventory Management System 
+Objective: 
+To design and develop a scalable SaaS-based inventory management system that enables multiple companies to manage their products, stock, and team members efficiently under subscription-based plans. 
+Core Idea: 
+A centralized platform serving multiple businesses with separate data, controlled access, and subscription-based usage. 
+ 
+2. Key Features 
+• Multi-tenant architecture (multiple companies with isolated data) 
+• Secure authentication using JWT 
+• Product and category management 
+• Real-time inventory tracking 
+• Low stock alerts 
+• Role-based access control (Admin, Staff) 
+• Subscription-based feature restrictions 
+• Structured and functional dashboard interface 
+ 
+3. System Architecture 
+High-Level Architecture 
+Frontend (React / Next.js) 
+? 
+Backend API (Node.js / Express) 
+? 
+Database (MongoDB / MySQL) 
+ 
+Request Flow 
+User Action ? Frontend ? API ? Backend ? Database ? Response ? UI Update 
+ 
+Authentication Flow 
+Login ? Verify credentials ? Generate JWT 
+? 
+Frontend stores token 
+? 
+Each request includes token 
+? 
+Backend verifies token and authorizes access 
+ 
+4. Tech Stack 
+Frontend 
+   • React.js / Next.js 
+   • Tailwind CSS 
+   • Axios 
+Backend 
+   • Node.js 
+   • Express.js 
+   • JWT Authentication 
+   • Bcrypt 
+Database 
+   • MongoDB or MySQL 
+Deployment 
+   • Frontend: Vercel 
+   • Backend: Render or Railway 
+   • Database: MongoDB Atlas 
+ 
+5. Database Design 
+Tables / Collections 
+Companies 
+   • id 
+   • name 
+   • email 
+   • plan 
+   • subscription_start 
+   • subscription_end 
+Users 
+   • id 
+   • company_id 
+   • name 
+   • email 
+   • password 
+   • role 
+Products 
+   • id 
+   • company_id 
+   • name 
+   • sku 
+   • category_id 
+   • price 
+   • stock 
+   • reserved_stock 
+Categories 
+   • id 
+   • company_id 
+   • name 
+Key Concept: 
+Each table contains a company_id field to ensure data isolation in a multi-tenant environment. 
+ 
+6. Core Modules and Working Flow 
+Authentication Module 
+   • Company registration and admin creation 
+   • Secure login using JWT 
+Product Management 
+   • Add, edit, delete, and view products 
+   • Products are linked to a specific company 
+Category Management 
+   • Create and manage product categories Inventory Management Stock Types: 
+   • Available Stock 
+   • Reserved Stock 
+   • Sold Stock 
+Workflow: 
+Order placed ? Stock reserved 
+Order shipped ? Stock deducted 
+Order cancelled ? Stock restored 
+Dashboard Module 
+   • Displays inventory insights and key metrics 
+User Management 
+   • Admin can add, update, or remove users 
+   • Role-based permissions (Admin and Staff) 
+ 
+7. Subscription System 
+Plans 
+Basic Plan 
+   • Maximum 50 products 
+   • 1 user 
+   • Limited features 
+Pro Plan 
+   • Maximum 500 products 
+   • Up to 5 users 
+   • Additional features such as alerts 
+Business Plan 
+   • Unlimited products 
+   • Unlimited users 
+   • Full feature access 
+ 
+Subscription Workflow 
+Register ? Select Plan ? Store Plan in Database 
+? 
+Middleware validates plan before allowing operations 
+ 
+Restrictions 
+   • Product limit 
+   • User limit 
+   • Feature access control 
+ 
+8. API Design 
+Authentication 
+   • POST /register 
+   • POST /login 
+Products 
+   • GET /products 
+   • POST /products 
+   • PUT /products/:id 
+   • DELETE /products/:id 
+Categories 
+   • GET /categories 
+   • POST /categories 
+Dashboard 
+   • GET /dashboard 
+Subscription 
+   • GET /plans 
+   • POST /subscribe 
+ 
+9. Frontend Pages and Functional Structure 
+Login Page 
+   • Email and password input 
+   • Login button 
+   • Link to registration 
+ 
+Register Page 
+   • Company name 
+   • Email 
+   • Password 
+   • Plan selection 
+ 
+Dashboard Page 
+Contains: 
+   • Summary cards (Total Products, Categories, Low Stock, Inventory Value) 
+   • Low stock table (Name, SKU, Stock, Status) 
+   • Inventory trend chart 
+   • Recent activity section 
+ 
+Products Page 
+Contains: 
+   • Search functionality 
+   • Filters (category and stock status) 
+   • Add Product button 
+Table Columns: 
+   • Product Name 
+   • SKU 
+   • Category 
+   • Price 
+   • Stock 
+   • Status 
+   • Actions (Edit/Delete) 
+ 
+Add / Edit Product Page Form Fields: 
+   • Product Name 
+   • SKU 
+   • Category 
+   • Price 
+   • Stock Quantity 
+   • Low Stock Threshold 
+   • Image Upload 
+ 
+Categories Page 
+   • Add category functionality 
+   • Category list 
+   • Product count per category 
+ 
+Users Page 
+   • User list with roles 
+   • Add or edit users 
+ 
+Subscription Page 
+   • Current plan details 
+   • Usage tracking (e.g., products used vs limit) 
+   • Plan comparison 
+   • Upgrade option 
+ 
+10. End-to-End Workflow 
+Customer places order on external platform 
+? 
+Admin receives order notification 
+? 
+Stock is reserved 
+? 
+Order is shipped and stock is deducted 
+? 
+Dashboard reflects updated inventory 
+ 
+11. Security and Best Practices 
+   • Password hashing using bcrypt 
+   • JWT-based authentication 
+   • Role-based authorization 
+   • Input validation 
+   • Structured error handling 
+ 
+12. Future Enhancements 
+   • Integration with external platforms such as Amazon and Shopify 
+   • Automated inventory synchronization 
+   • Payment gateway integration 
+   • Advanced analytics and reporting 
+   • Mobile application support 
+ 
