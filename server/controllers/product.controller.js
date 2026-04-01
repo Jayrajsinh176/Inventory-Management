@@ -10,7 +10,10 @@ import {
 
 const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
 
-const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const escapeRegex = (value) => {
+  if (typeof value !== "string") return "";
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 const buildProductPayload = (product) => ({
   id: product._id,
@@ -76,11 +79,18 @@ export const getProducts = async (req, res) => {
       query.$or = [{ name: searchRegex }, { sku: searchRegex }];
     }
 
+    const page = parseInt(req.query.page) || 0;
+    const limit = parseInt(req.query.limit) || 10;
+
     const products = await Product.find(query)
       .populate("category", "name")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(page*limit)
+      .limit(limit)
+      .lean();
 
     return res.status(200).json({
+      success: true,
       message: "Products fetched successfully",
       count: products.length,
       products: products.map(buildProductPayload),
@@ -93,19 +103,26 @@ export const getProducts = async (req, res) => {
 export const getProductById = async (req, res) => {
   try {
     if (!isValidObjectId(req.params.id)) {
-      return res.status(400).json({ message: "Invalid product id" });
+      return res.status(400).json({ 
+        success : false,
+        message: "Invalid product id" 
+      });
     }
 
     const product = await Product.findOne({
       _id: req.params.id,
       company: req.user.company,
-    }).populate("category", "name");
+    }).populate("category", "name").lean();
 
     if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+      return res.status(404).json({ 
+        success : false,
+        message: "Product not found" 
+      });
     }
 
     return res.status(200).json({
+      success: true,
       message: "Product fetched successfully",
       product: buildProductPayload(product),
     });
@@ -128,40 +145,54 @@ export const createProduct = async (req, res) => {
 
     if (!name || !sku || !category || price === undefined) {
       return res.status(400).json({
+        success : false,
         message: "Name, SKU, category, and price are required",
       });
     }
 
     if (!isValidObjectId(category)) {
-      return res.status(400).json({ message: "Invalid category id" });
+      return res.status(400).json({ 
+        success : false,
+        message: "Invalid category id" 
+      });
+    }
+    if (typeof price !== "number") {
+      return res.status(400).json({ 
+        success : false,
+        message: "Price must be a number" 
+      });
     }
 
+    if (stock !== undefined && typeof stock !== "number") {
+      return res.status(400).json({ 
+        success : false,
+        message: "Stock must be a number" 
+      });
+    }
     const company = await Company.findById(req.user.company).select("plan");
 
     if (!company) {
-      return res.status(404).json({ message: "Company not found" });
+      return res.status(404).json({ 
+        success : false,
+        message: "Company not found" 
+      });
     }
 
     const productCount = await Product.countDocuments({ company: req.user.company });
     if (!canAddProductToPlan(company.plan, productCount)) {
       const plan = getSubscriptionPlan(company.plan);
       return res.status(403).json({
+        success : false,
         message: `${plan.label} plan allows up to ${formatPlanProductLimit(company.plan)} products. Upgrade your plan to add more products.`,
       });
     }
 
     const existingCategory = await getScopedCategory(category, req.user.company);
     if (!existingCategory) {
-      return res.status(404).json({ message: "Category not found for this company" });
-    }
-
-    const existingSku = await Product.findOne({
-      company: req.user.company,
-      sku,
-    }).select("_id");
-
-    if (existingSku) {
-      return res.status(400).json({ message: "SKU already exists for this company" });
+      return res.status(404).json({ 
+        success : false,
+        message: "Category not found for this company" 
+      });
     }
 
     const product = await Product.create({
@@ -176,6 +207,7 @@ export const createProduct = async (req, res) => {
     await product.populate("category", "name");
 
     return res.status(201).json({
+      success : true,
       message: "Product created successfully",
       product: buildProductPayload(product),
       subscription: {
@@ -195,12 +227,16 @@ export const createProduct = async (req, res) => {
  */
 export const updateProduct = async (req, res) => {
   try {
-    if (!isValidObjectId(req.params.id)) {
+    const { id } = req.params;
+
+    // Validate ID
+    if (!isValidObjectId(id)) {
       return res.status(400).json({ message: "Invalid product id" });
     }
 
+    // Find product (multi-tenant safe)
     const product = await Product.findOne({
-      _id: req.params.id,
+      _id: id,
       company: req.user.company,
     });
 
@@ -209,7 +245,9 @@ export const updateProduct = async (req, res) => {
     }
 
     const allowedFields = ["name", "sku", "category", "price", "stock"];
-    const updateFields = Object.keys(req.body).filter((field) => allowedFields.includes(field));
+    const updateFields = Object.keys(req.body).filter((field) =>
+      allowedFields.includes(field)
+    );
 
     if (!updateFields.length) {
       return res.status(400).json({
@@ -217,58 +255,73 @@ export const updateProduct = async (req, res) => {
       });
     }
 
-    if (req.body.category !== undefined) {
-      if (!isValidObjectId(req.body.category)) {
+    const { name, sku, category, price, stock } = req.body;
+
+    if (category !== undefined) {
+      if (!isValidObjectId(category)) {
         return res.status(400).json({ message: "Invalid category id" });
       }
 
-      const existingCategory = await getScopedCategory(req.body.category, req.user.company);
+      const existingCategory = await getScopedCategory(
+        category,
+        req.user.company
+      );
+
       if (!existingCategory) {
-        return res.status(404).json({ message: "Category not found for this company" });
+        return res
+          .status(404)
+          .json({ message: "Category not found for this company" });
       }
+
+      product.category = category;
     }
 
-    if (req.body.sku !== undefined) {
-      const normalizedSku = req.body.sku?.trim().toUpperCase();
+
+    if (sku !== undefined) {
+      const normalizedSku = sku?.trim().toUpperCase();
+
       if (!normalizedSku) {
         return res.status(400).json({ message: "SKU cannot be empty" });
       }
-
-      const duplicateSku = await Product.findOne({
-        company: req.user.company,
-        sku: normalizedSku,
-        _id: { $ne: product._id },
-      }).select("_id");
-
-      if (duplicateSku) {
-        return res.status(400).json({ message: "SKU already exists for this company" });
-      }
-
       product.sku = normalizedSku;
     }
 
-    if (req.body.name !== undefined) {
-      product.name = req.body.name?.trim();
+    if (name !== undefined) {
+      const trimmed = name?.trim();
+
+      if (!trimmed) {
+        return res.status(400).json({ message: "Name cannot be empty" });
+      }
+
+      product.name = trimmed;
     }
 
-    if (req.body.category !== undefined) {
-      product.category = req.body.category;
+    if (price !== undefined) {
+      if (typeof price !== "number") {
+        return res.status(400).json({ message: "Price must be a number" });
+      }
+
+      product.price = price;
     }
 
-    if (req.body.price !== undefined) {
-      product.price = req.body.price;
+    if (stock !== undefined) {
+      if (typeof stock !== "number") { 
+        return res.status(400).json({ message: "Stock must be a number" });
+      }
+
+      product.stock = stock;
     }
 
-    if (req.body.stock !== undefined) {
-      product.stock = req.body.stock;
-    }
-
+    // Save
     await product.save();
+
+    // Populate category
     await product.populate("category", "name");
 
     return res.status(200).json({
+      success: true,
       message: "Product updated successfully",
-      product: buildProductPayload(product),
+      data: buildProductPayload(product),
     });
   } catch (error) {
     return handleProductError(res, error);
