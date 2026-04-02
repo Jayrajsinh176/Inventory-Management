@@ -1,11 +1,11 @@
+import { MdSearch, MdNotifications } from 'react-icons/md';
+
 const Header = () => {
   return (
     <div className="h-14 bg-white border-b border-[#DEE2E6] sticky top-0 z-10 flex items-center justify-between px-8">
       {/* Search Input */}
       <div className="w-72 relative">
-        <i className="material-symbols-rounded absolute left-3 top-1/2 transform -translate-y-1/2 text-[#6C757D] text-[20px]">
-          search
-        </i>
+        <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#6C757D] text-[20px]" />
         <input
           type="text"
           placeholder="Search..."
@@ -17,7 +17,7 @@ const Header = () => {
       <div className="flex items-center gap-6">
         {/* Notifications */}
         <button className="relative text-[#6C757D] hover:text-[#212529] transition-colors">
-          <i className="material-symbols-rounded text-[20px]">notifications</i>
+          <MdNotifications className="text-[20px]" />
           <span className="absolute top-0 right-0 w-2 h-2 bg-[#DC3545] rounded-full"></span>
         </button>
 

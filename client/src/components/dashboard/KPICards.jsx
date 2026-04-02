@@ -1,34 +1,42 @@
+import { MdInventory2, MdCategory, MdWarning, MdPayments, MdTrendingUp, MdTrendingDown } from 'react-icons/md';
+
 const KPICards = () => {
   const cards = [
     {
       label: 'Total Products',
-      value: '1,234',
-      change: '+12',
+      value: '2,450',
+      change: '+4.2%',
       trend: 'up',
-      icon: 'inventory_2',
+      icon: MdInventory2,
     },
     {
-      label: 'Total Stock Value',
-      value: '$45,320',
-      change: '+8.5%',
-      trend: 'up',
-      icon: 'trending_up',
+      label: 'Total Categories',
+      value: '18',
+      subvalue: 'Active Segments',
+      trend: 'neutral',
+      icon: MdCategory,
     },
     {
       label: 'Low Stock Items',
-      value: '28',
-      change: '+5',
+      value: '12',
+      statusLabel: 'Critical',
+      status: 'critical',
       trend: 'down',
-      icon: 'warning',
+      icon: MdWarning,
     },
     {
-      label: 'Recent Movement',
-      value: '342',
-      change: '+23%',
+      label: 'Total Inventory Value',
+      value: '$1.24M',
+      change: '+8.1%',
       trend: 'up',
-      icon: 'movement',
+      icon: MdPayments,
     },
   ];
+
+  const getCardColor = (status) => {
+    if (status === 'critical') return '#DC3545';
+    return '#007BFF';
+  };
 
   return (
     <div className="grid grid-cols-4 gap-6 mb-8">
@@ -39,35 +47,41 @@ const KPICards = () => {
         >
           <div className="flex items-start justify-between mb-3">
             <div>
-              <p className="text-[12px] uppercase font-semibold text-[#6C757D] tracking-wide mb-2">
+              <p className="text-[11px] uppercase font-semibold text-[#6C757D] tracking-[0.08em] mb-2">
                 {card.label}
               </p>
               <p className="text-[24px] font-bold text-[#212529]">{card.value}</p>
+              {card.subvalue && (
+                <p className="text-[12px] text-[#6C757D] mt-1">{card.subvalue}</p>
+              )}
             </div>
-            <i className="material-symbols-rounded text-[24px] text-[#007BFF]">
-              {card.icon}
-            </i>
+            {card.icon && <card.icon className="text-[24px]" style={{ color: getCardColor(card.status) }} />}
           </div>
 
-          {/* Change indicator */}
+          {/* Status Badge or Change Indicator */}
           <div className="flex items-center gap-2">
-            <i className={`material-symbols-rounded text-[16px] ${
-              card.trend === 'up' ? 'text-[#28A745]' : 'text-[#DC3545]'
-            }`}>
-              {card.trend === 'up' ? 'trending_up' : 'trending_down'}
-            </i>
-            <span className={`text-[14px] font-semibold ${
-              card.trend === 'up' ? 'text-[#28A745]' : 'text-[#DC3545]'
-            }`}>
-              {card.change}
-            </span>
-            <span className="text-[14px] text-[#6C757D]">
-              {card.trend === 'up' ? 'vs last month' : 'vs last month'}
-            </span>
+            {card.statusLabel ? (
+              <span className="inline-block px-2.5 py-1 bg-[#DC3545] text-white text-[10px] font-semibold rounded">
+                {card.statusLabel}
+              </span>
+            ) : (
+              <>
+                {card.trend === 'up' ? (
+                  <MdTrendingUp className={`text-[14px] text-[#28A745]`} />
+                ) : card.trend === 'down' ? (
+                  <MdTrendingDown className={`text-[14px] text-[#DC3545]`} />
+                ) : (
+                  <span className={`text-[14px] text-[#6C757D]`}>−</span>
+                )}
+                <span className={`text-[12px] font-semibold ${
+                  card.trend === 'up' ? 'text-[#28A745]' : card.trend === 'down' ? 'text-[#DC3545]' : 'text-[#6C757D]'
+                }`}>
+                  {card.change}
+                </span>
+                <span className="text-[12px] text-[#6C757D]">vs last month</span>
+              </>
+            )}
           </div>
-
-          {/* Left border accent */}
-          <div className="absolute left-0 top-0 h-full w-1 bg-[#000000] rounded-l-lg opacity-0 hover:opacity-100 transition-opacity"></div>
         </div>
       ))}
     </div>

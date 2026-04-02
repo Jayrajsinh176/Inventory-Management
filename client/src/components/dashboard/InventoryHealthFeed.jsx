@@ -1,3 +1,5 @@
+import { MdCheckCircle, MdSchedule, MdError, MdLightbulb } from 'react-icons/md';
+
 const InventoryHealthFeed = () => {
   const events = [
     {
@@ -6,7 +8,7 @@ const InventoryHealthFeed = () => {
       description: 'Section A12',
       detail: '+450 Units',
       time: '2 mins ago',
-      icon: 'check_circle',
+      icon: MdCheckCircle,
       color: '#28A745',
     },
     {
@@ -15,7 +17,7 @@ const InventoryHealthFeed = () => {
       description: 'SKU-902',
       detail: 'Waiting Approval',
       time: '45 mins ago',
-      icon: 'schedule',
+      icon: MdSchedule,
       color: '#FFC107',
     },
     {
@@ -24,7 +26,7 @@ const InventoryHealthFeed = () => {
       description: 'Batch 04',
       detail: 'Action Required',
       time: '2 hours ago',
-      icon: 'error',
+      icon: MdError,
       color: '#DC3545',
     },
   ];
@@ -42,10 +44,7 @@ const InventoryHealthFeed = () => {
               <div className="flex-shrink-0">
                 <div className="w-10 h-10 rounded-full flex items-center justify-center"
                   style={{ backgroundColor: `${event.color}20` }}>
-                  <i className="material-symbols-rounded text-[20px]"
-                    style={{ color: event.color }}>
-                    {event.icon}
-                  </i>
+                  {event.icon && <event.icon className="text-[20px]" style={{ color: event.color }} />}
                 </div>
               </div>
 
@@ -67,15 +66,13 @@ const InventoryHealthFeed = () => {
       </div>
 
       {/* Architect's Tip Callout */}
-      <div className="bg-[#E7F1FF] border border-[#B8DAFF] rounded-lg p-5 border-l-4 border-l-[#007BFF]">
+      <div className="bg-[#212529] border border-[#212529] rounded-lg p-5">
         <div className="flex gap-3 mb-3">
-          <i className="material-symbols-rounded text-[20px] text-[#007BFF] flex-shrink-0">
-            lightbulb
-          </i>
-          <h4 className="text-[14px] font-semibold text-[#004085]">Architect's Tip</h4>
+          <span className="text-[20px] text-white flex-shrink-0">💡</span>
+          <h4 className="text-[14px] font-semibold text-white">ARCHITECT'S TIP</h4>
         </div>
-        <p className="text-[13px] text-[#004085] leading-relaxed">
-          Set up automatic reorder alerts for items that frequently hit low stock levels. This can reduce manual intervention and improve fulfillment times.
+        <p className="text-[13px] text-white leading-relaxed">
+          System optimization suggests reallocating storage from Category B to Category D to reduce retrieval latency.
         </p>
       </div>
     </div>

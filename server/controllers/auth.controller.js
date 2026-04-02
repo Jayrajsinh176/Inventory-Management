@@ -123,6 +123,9 @@ export const registerUser = async (req, res) => {
       role: "admin",
     });
 
+    // Manually set the company object so buildUserResponse can access company_name
+    user.company = company;
+
     return res.status(201).json({
       success : true,
       message: company ? "Account created successfully" : "User registered successfully",

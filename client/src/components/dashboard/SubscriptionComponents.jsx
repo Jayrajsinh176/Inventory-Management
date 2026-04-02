@@ -1,3 +1,5 @@
+import { MdCheckCircle, MdWarning, MdDone, MdReceiptLong } from 'react-icons/md';
+
 const CurrentPlanBanner = () => {
   return (
     <div className="bg-white border border-[#DEE2E6] rounded-lg p-6 shadow-md mb-8">
@@ -6,7 +8,7 @@ const CurrentPlanBanner = () => {
           <div className="flex items-center gap-3 mb-4">
             <h3 className="text-[18px] font-semibold text-[#212529]">Pro Plan</h3>
             <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#D4EDDA] border border-[#C3E6CB] rounded-full text-[11px] font-semibold text-[#155724]">
-              <i className="material-symbols-rounded text-[14px]">check_circle</i>
+              <MdCheckCircle className="text-[14px]" />
               Active
             </span>
           </div>
@@ -60,7 +62,7 @@ const UsageProgressBar = () => {
         <div className="text-[13px] text-[#6C757D] flex items-center gap-2">
           {isNearLimit && (
             <>
-              <i className="material-symbols-rounded text-[16px] text-[#FFC107]">warning</i>
+              <MdWarning className="text-[16px] text-[#FFC107]" />
               <span>You are approaching your product limit. Consider upgrading to Business plan.</span>
             </>
           )}
@@ -135,7 +137,7 @@ const PlanUpgradeCards = () => {
             <ul className="space-y-2 mb-6">
               {plan.features.map((feature, i) => (
                 <li key={i} className="flex items-start gap-2 text-[13px] text-[#6C757D]">
-                  <i className="material-symbols-rounded text-[16px] text-[#28A745] mt-0.5">done</i>
+                  <MdDone className="text-[16px] text-[#28A745] mt-0.5" />
                   <span>{feature}</span>
                 </li>
               ))}
@@ -190,7 +192,7 @@ const TransactionHistory = () => {
     <div className="bg-white border border-[#DEE2E6] rounded-lg shadow-md overflow-hidden">
       {/* Header */}
       <div className="px-6 py-4 bg-[#F8F9FA] border-b border-[#DEE2E6] flex items-center gap-2">
-        <i className="material-symbols-rounded text-[20px] text-[#6C757D]">receipt_long</i>
+        <MdReceiptLong className="text-[20px] text-[#6C757D]" />
         <h3 className="text-[18px] font-semibold text-[#212529]">Recent Transactions</h3>
       </div>
 

@@ -1,5 +1,14 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthService } from '../../api';
+import {
+  MdDashboard,
+  MdInventory2,
+  MdCategory,
+  MdGroup,
+  MdPayments,
+  MdSettings,
+  MdLogout,
+} from 'react-icons/md';
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -86,7 +95,7 @@ const Sidebar = () => {
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-[#6C757D] font-medium hover:bg-[#E9ECEF] hover:text-[#212529] transition-colors"
         >
-          <i className="material-symbols-rounded">logout</i>
+          <MdLogout className="text-[18px]" />
           <span className="text-[13px]">Logout</span>
         </button>
       </div>
@@ -95,15 +104,27 @@ const Sidebar = () => {
 };
 
 const NavItem = ({ icon, label, active, onClick, path }) => {
+  const iconMap = {
+    dashboard: MdDashboard,
+    inventory_2: MdInventory2,
+    category: MdCategory,
+    group: MdGroup,
+    payments: MdPayments,
+    settings: MdSettings,
+  };
+
+  const IconComponent = iconMap[icon];
+
   return (
     <button
       onClick={onClick}
-      className={`w-full h-11 flex items-center gap-3 px-3 rounded-md transition-all duration-150 ${active
+      className={`w-full h-11 flex items-center gap-3 px-3 rounded-md transition-all duration-150 ${
+        active
           ? 'bg-[#E9ECEF] text-[#000000] font-semibold border-l-3 border-[#000000] pl-2'
           : 'text-[#6C757D] font-medium hover:bg-[#E9ECEF]'
         }`}
     >
-      <i className="material-symbols-rounded">{icon}</i>
+      {IconComponent && <IconComponent className="text-[18px]" />}
       <span className="text-[14px]">{label}</span>
     </button>
   );

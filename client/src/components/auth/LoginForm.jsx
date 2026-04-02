@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { MdError } from 'react-icons/md';
 import { loginUser } from '../../api';
 
 const LoginForm = () => {
@@ -45,8 +46,8 @@ const LoginForm = () => {
       {/* Error Alert */}
       {error && (
         <div className="mb-5 p-4 bg-[#F8D7DA] border border-[#F5C6CB] rounded-lg">
-          <p className="text-[13px] text-[#721C24]">
-            <i className="material-symbols-rounded text-[16px] align-middle mr-2">error</i>
+          <p className="text-[13px] text-[#721C24] flex items-center gap-2">
+            <MdError className="text-[16px]" />
             {error}
           </p>
         </div>
