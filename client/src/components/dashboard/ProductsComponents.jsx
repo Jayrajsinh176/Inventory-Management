@@ -1,7 +1,8 @@
-import { MdAdd, MdEdit, MdFilterList } from 'react-icons/md';
+import { MdAdd, MdEdit, MdFilterList, MdDelete } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { getProducts } from '../../api';
+import { getProducts, deleteProduct } from '../../api';
+import ConfirmationModal from '../common/ConfirmationModal';
 
 const ProductsHeader = () => {
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ const ProductsHeader = () => {
 
 const SummaryCards = () => {
   const [stats, setStats] = useState({
-    inventoryValue: '$0.00',
+    inventoryValue: '₹0.00',
     lowStockAlerts: 0,
     recentMovement: 0,
   });
@@ -48,7 +49,7 @@ const SummaryCards = () => {
           const lowStockCount = response.products.filter(p => p.stock < 10).length;
           
           setStats({
-            inventoryValue: `$${totalValue.toFixed(2)}`,
+            inventoryValue: `₹${totalValue.toFixed(2)}`,
             lowStockAlerts: lowStockCount,
             recentMovement: response.count || 0,
           });
@@ -85,12 +86,15 @@ const SummaryCards = () => {
 };
 
 const ProductsTable = () => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [deleteProductId, setDeleteProductId] = useState(null);
   const limit = 10;
 
   useEffect(() => {
@@ -122,7 +126,7 @@ const ProductsTable = () => {
   }, [currentPage, searchTerm]);
 
   const getStatusColor = (stock) => {
-    if (stock > 20) {
+    if (stock > 5) {
       return { bg: '#D4EDDA', text: '#155724', border: '#C3E6CB', status: 'IN STOCK' };
     } else if (stock > 0) {
       return { bg: '#FFF3CD', text: '#856404', border: '#FFEEBA', status: 'LOW STOCK' };
@@ -132,20 +136,35 @@ const ProductsTable = () => {
   };
 
   const handleEdit = (productId) => {
-    console.log('Edit product:', productId);
-    // Navigate to edit page when ready
+    navigate(`/products/edit/${productId}`);
   };
 
-  const handleDelete = async (productId) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
-      try {
-        // await deleteProduct(productId);
-        // Refresh products list
-        setProducts(products.filter(p => p.id !== productId));
-      } catch (err) {
-        console.error('Failed to delete product:', err);
-      }
+  const handleDelete = (productId) => {
+    setDeleteProductId(productId);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const onConfirmDelete = async () => {
+    if (!deleteProductId) return;
+
+    try {
+      await deleteProduct(deleteProductId);
+      // Remove product from list
+      setProducts(products.filter(p => p.id !== deleteProductId));
+      setTotalCount(totalCount - 1);
+      setIsDeleteConfirmOpen(false);
+      setDeleteProductId(null);
+    } catch (err) {
+      console.error('Failed to delete product:', err);
+      alert(err.message || 'Failed to delete product');
+      setIsDeleteConfirmOpen(false);
+      setDeleteProductId(null);
     }
+  };
+
+  const onCancelDelete = () => {
+    setIsDeleteConfirmOpen(false);
+    setDeleteProductId(null);
   };
 
   if (error) {
@@ -248,7 +267,7 @@ const ProductsTable = () => {
                       <p className="text-[14px] font-semibold text-[#212529]">{product.stock}</p>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-[14px] font-semibold text-[#212529]">${product.price.toFixed(2)}</p>
+                      <p className="text-[14px] font-semibold text-[#212529]">₹{product.price.toFixed(2)}</p>
                     </td>
                     <td className="px-6 py-4">
                       <span
@@ -266,7 +285,7 @@ const ProductsTable = () => {
                       <div className="flex items-center justify-end gap-2">
                         <button 
                           onClick={() => handleEdit(product.id)}
-                          className="text-[#007BFF] hover:text-[#0056b3] transition-colors"
+                          className="text-[#000] hover:text-[#0056b3] transition-colors"
                         >
                           <MdEdit className="text-[20px]" />
                         </button>
@@ -274,7 +293,7 @@ const ProductsTable = () => {
                           onClick={() => handleDelete(product.id)}
                           className="text-[#DC3545] hover:text-[#c82333] transition-colors"
                         >
-                          <span className="text-[20px]">🗑️</span>
+                          <MdDelete className="text-[20px]" />
                         </button>
                       </div>
                     </td>
@@ -321,6 +340,18 @@ const ProductsTable = () => {
           </button>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={isDeleteConfirmOpen}
+        title="Delete Product"
+        message="Are you sure you want to delete this product? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={onConfirmDelete}
+        onCancel={onCancelDelete}
+        isDangerous={true}
+      />
     </div>
   );
 };

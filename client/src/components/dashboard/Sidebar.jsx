@@ -17,7 +17,7 @@ const Sidebar = () => {
 
   const handleLogout = () => {
     AuthService.clearAuth();
-    navigate('/login');
+    navigate('/');
   };
 
   const isActive = (path) => {
@@ -28,8 +28,7 @@ const Sidebar = () => {
     <div className="w-[260px] h-screen bg-[#F1F3F5] border-r border-[#DEE2E6] fixed left-0 top-0 flex flex-col">
       {/* Logo Area */}
       <div className="px-4 py-4 border-b border-[#DEE2E6]">
-        <h1 className="text-[16px] font-bold text-[#212529]">SILENT ARCHITECT</h1>
-        <p className="text-[12px] text-[#6C757D] mt-1">Inventory v2.4</p>
+        <h1 className="text-[15.5px] font-bold text-[#212529]">SILENT ARCHITECT</h1>
       </div>
 
       {/* Navigation Items */}
@@ -69,13 +68,13 @@ const Sidebar = () => {
           active={isActive('/subscription')}
           onClick={() => navigate('/subscription')}
         />
-        <NavItem
+        {/* <NavItem
           icon="settings"
           label="Settings"
           path="/settings"
           active={isActive('/settings')}
           onClick={() => navigate('/settings')}
-        />
+        /> */}
       </nav>
 
       {/* User Info + Logout (bottom) */}

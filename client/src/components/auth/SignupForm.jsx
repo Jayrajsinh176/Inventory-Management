@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { MdError } from 'react-icons/md';
+import { MdError, MdVisibility, MdVisibilityOff } from 'react-icons/md';
 import { registerUser } from '../../api';
 
 const SignupForm = () => {
@@ -20,7 +20,15 @@ const SignupForm = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    // Limit phone to 10 digits only
+    if (name === 'phone') {
+      const phoneOnly = value.replace(/\D/g, '').slice(0, 10);
+      setFormData((prev) => ({ ...prev, [name]: phoneOnly }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+    
     // Clear field error when user starts typing
     if (fieldErrors[name]) {
       setFieldErrors((prev) => ({ ...prev, [name]: '' }));
@@ -71,33 +79,33 @@ const SignupForm = () => {
   };
 
   const inputClass =
-    'w-full h-[44px] px-4 bg-[#F8F9FA] border border-[#DEE2E6] rounded-lg text-[14px] text-[#212529] placeholder-[#ADB5BD] focus:outline-none focus:border-black focus:bg-white focus:ring-[3px] focus:ring-black/8 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
+    'w-full h-[36px] px-3 bg-[#F8F9FA] border border-[#DEE2E6] rounded-lg text-[12px] text-[#212529] placeholder-[#ADB5BD] focus:outline-none focus:border-black focus:bg-white focus:ring-[2px] focus:ring-black/8 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
 
   const labelClass =
-    'block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6C757D] mb-2';
+    'block text-[10px] font-semibold uppercase tracking-[0.06em] text-[#6C757D] mb-1';
 
-  const errorLabelClass = 'block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#721C24] mb-2';
+  const errorLabelClass = 'block text-[10px] font-semibold uppercase tracking-[0.06em] text-[#721C24] mb-1';
 
   return (
-    <div className="bg-white rounded-2xl shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1),0_4px_6px_-2px_rgba(0,0,0,0.05)] border border-[#DEE2E6] p-10 w-full max-w-[500px]">
+    <div className="bg-white rounded-2xl shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1),0_4px_6px_-2px_rgba(0,0,0,0.05)] border border-[#DEE2E6] p-5 w-full max-w-[480px]">
       {/* Form Header */}
-      <div className="mb-8">
-        <h2 className="text-[22px] font-semibold text-[#212529] mb-1">Create your account</h2>
-        <p className="text-[14px] text-[#6C757D]">Set up your inventory management system today</p>
+      <div className="mb-3">
+        <h2 className="text-[18px] font-semibold text-[#212529] mb-0.5">Create your account</h2>
+        <p className="text-[11px] text-[#6C757D]">Set up your inventory management system</p>
       </div>
 
       {/* Error Alert */}
       {error && (
-        <div className="mb-5 p-4 bg-[#F8D7DA] border border-[#F5C6CB] rounded-lg">
-          <p className="text-[13px] text-[#721C24] flex items-center gap-2">
-            <MdError className="text-[16px]" />
-            {error}
+        <div className="mb-3 p-2 bg-[#F8D7DA] border border-[#F5C6CB] rounded-lg">
+          <p className="text-[11px] text-[#721C24] flex items-center gap-1">
+            <MdError className="text-[12px] flex-shrink-0" />
+            <span>{error}</span>
           </p>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Company Name */}
+      <form onSubmit={handleSubmit} className="space-y-2.5">
+        {/* Row 1: Company Name (Full Width) */}
         <div>
           <label htmlFor="signup-company" className={fieldErrors.company_name ? errorLabelClass : labelClass}>
             Company Name {fieldErrors.company_name && '- ' + fieldErrors.company_name}
@@ -114,24 +122,44 @@ const SignupForm = () => {
           />
         </div>
 
-        {/* Full Name */}
-        <div>
-          <label htmlFor="signup-name" className={fieldErrors.name ? errorLabelClass : labelClass}>
-            Full Name {fieldErrors.name && '- ' + fieldErrors.name}
-          </label>
-          <input
-            id="signup-name"
-            name="name"
-            type="text"
-            value={formData.name}
-            onChange={handleChange}
-            placeholder="John Doe"
-            disabled={loading}
-            className={`${inputClass} ${fieldErrors.name ? 'border-[#DC3545]' : ''}`}
-          />
+        {/* Row 2: Full Name & Phone (2 Columns) */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="signup-name" className={fieldErrors.name ? errorLabelClass : labelClass}>
+              Full Name {fieldErrors.name && '- ' + fieldErrors.name}
+            </label>
+            <input
+              id="signup-name"
+              name="name"
+              type="text"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="John Doe"
+              disabled={loading}
+              className={`${inputClass} ${fieldErrors.name ? 'border-[#DC3545]' : ''}`}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="signup-phone" className={fieldErrors.phone ? errorLabelClass : labelClass}>
+              Phone {fieldErrors.phone && '- ' + fieldErrors.phone}
+            </label>
+            <input
+              id="signup-phone"
+              name="phone"
+              type="tel"
+              value={formData.phone}
+              onChange={handleChange}
+              placeholder="9876543210"
+              maxLength="10"
+              pattern="[0-9]{10}"
+              disabled={loading}
+              className={`${inputClass} ${fieldErrors.phone ? 'border-[#DC3545]' : ''}`}
+            />
+          </div>
         </div>
 
-        {/* Email */}
+        {/* Row 3: Email (Full Width) */}
         <div>
           <label htmlFor="signup-email" className={fieldErrors.email ? errorLabelClass : labelClass}>
             Email Address {fieldErrors.email && '- ' + fieldErrors.email}
@@ -148,24 +176,7 @@ const SignupForm = () => {
           />
         </div>
 
-        {/* Phone */}
-        <div>
-          <label htmlFor="signup-phone" className={fieldErrors.phone ? errorLabelClass : labelClass}>
-            Phone Number {fieldErrors.phone && '- ' + fieldErrors.phone}
-          </label>
-          <input
-            id="signup-phone"
-            name="phone"
-            type="tel"
-            value={formData.phone}
-            onChange={handleChange}
-            placeholder="+1 (555) 000-0000"
-            disabled={loading}
-            className={`${inputClass} ${fieldErrors.phone ? 'border-[#DC3545]' : ''}`}
-          />
-        </div>
-
-        {/* Address */}
+        {/* Row 4: Address (Full Width) */}
         <div>
           <label htmlFor="signup-address" className={fieldErrors.address ? errorLabelClass : labelClass}>
             Business Address {fieldErrors.address && '- ' + fieldErrors.address}
@@ -182,7 +193,7 @@ const SignupForm = () => {
           />
         </div>
 
-        {/* Password */}
+        {/* Row 5: Password (Full Width) */}
         <div>
           <label htmlFor="signup-password" className={fieldErrors.password ? errorLabelClass : labelClass}>
             Password {fieldErrors.password && '- ' + fieldErrors.password}
@@ -206,11 +217,11 @@ const SignupForm = () => {
               className="absolute right-4 top-1/2 -translate-y-1/2 text-[#ADB5BD] hover:text-[#6C757D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
-              {showPassword ? '🙈' : '👁'}
+              {showPassword ? <MdVisibilityOff size={18} /> : <MdVisibility size={18} />}
             </button>
           </div>
           {!fieldErrors.password && (
-            <p className="text-[12px] text-[#6C757D] mt-1">Minimum 6 characters</p>
+            <p className="text-[10px] text-[#6C757D] mt-0.5">Min 6 chars</p>
           )}
         </div>
 
@@ -219,7 +230,7 @@ const SignupForm = () => {
           id="signup-submit"
           type="submit"
           disabled={loading}
-          className="w-full h-[52px] bg-[#1C2033] text-white font-semibold text-[15px] rounded-xl hover:bg-black transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-6"
+          className="w-full h-[40px] bg-[#1C2033] text-white font-semibold text-[13px] rounded-xl hover:bg-black transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-3"
         >
           {loading ? (
             <>
@@ -235,7 +246,7 @@ const SignupForm = () => {
         </button>
 
         {/* Login Link */}
-        <p className="text-center text-[14px] text-[#6C757D]">
+        <p className="text-center text-[11px] text-[#6C757D]">
           Already have an account?{' '}
           <Link
             to="/login"

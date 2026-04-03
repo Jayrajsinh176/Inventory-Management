@@ -6,8 +6,10 @@ import DashboardPage from './pages/DashboardPage';
 import ProductsPage from './pages/ProductsPage';
 import CategoriesPage from './pages/CategoriesPage';
 import AddProductPage from './pages/AddProductPage';
+import EditProductPage from './pages/EditProductPage';
 import SubscriptionPage from './pages/SubscriptionPage';
 import UsersPage from './pages/UsersPage';
+import EditUserPage from './pages/EditUserPage';
 
 function App() {
   return (
@@ -22,9 +24,11 @@ function App() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/products" element={<ProductsPage />} />
         <Route path="/products/add" element={<AddProductPage />} />
+        <Route path="/products/edit/:productId" element={<EditProductPage />} />
         <Route path="/categories" element={<CategoriesPage />} />
         <Route path="/subscription" element={<SubscriptionPage />} />
         <Route path="/users" element={<UsersPage />} />
+        <Route path="/users/edit/:userId" element={<EditUserPage />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

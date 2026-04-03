@@ -1,16 +1,17 @@
 import { MdEdit, MdInventory2, MdImage } from 'react-icons/md';
 import { useState, useEffect } from 'react';
-import { getCategories, createProduct } from '../../api';
+import { getCategories, createProduct, updateProduct } from '../../api';
 
-const AddProductForm = () => {
+const AddProductForm = ({ product = null, onSubmitSuccess = null }) => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
+  const isEditMode = !!product;
   const [formData, setFormData] = useState({
-    name: '',
-    sku: '',
-    category: '',
-    price: 0,
-    stock: 0,
+    name: product?.name || '',
+    sku: product?.sku || '',
+    category: product?.category?.id || product?.category || '',
+    price: product?.price ? String(product.price) : '',
+    stock: product?.stock ? String(product.stock) : '',
   });
 
   useEffect(() => {
@@ -28,12 +29,32 @@ const AddProductForm = () => {
     fetchCategories();
   }, []);
 
+  // Update form data when product prop changes (for edit mode)
+  useEffect(() => {
+    if (product) {
+      setFormData({
+        name: product.name || '',
+        sku: product.sku || '',
+        category: product.category?.id || product.category || '',
+        price: product.price ? String(product.price) : '',
+        stock: product.stock ? String(product.stock) : '',
+      });
+    }
+  }, [product]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === 'price' || name === 'stock' ? parseFloat(value) || 0 : value,
-    }));
+    if (name === 'price' || name === 'stock') {
+      // Allow empty string or valid numbers
+      if (value === '' || !isNaN(value)) {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+        }));
+      }
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleFormSubmit = async (e) => {
@@ -47,35 +68,64 @@ const AddProductForm = () => {
     setLoading(true);
 
     try {
-      const response = await createProduct(formData);
-      
-      if (response) {
-        alert('Product created successfully!');
-        // Reset form
-        setFormData({
-          name: '',
-          sku: '',
-          category: '',
-          price: 0,
-          stock: 0,
-        });
+      const productPayload = {
+        ...formData,
+        price: formData.price === '' ? 0 : parseFloat(formData.price),
+        stock: formData.stock === '' ? 0 : parseFloat(formData.stock),
+      };
+
+      if (isEditMode) {
+        const response = await updateProduct(product.id, productPayload);
+        if (response) {
+          alert('Product updated successfully!');
+          if (onSubmitSuccess) {
+            onSubmitSuccess();
+          }
+        }
+      } else {
+        const response = await createProduct(productPayload);
+        if (response) {
+          alert('Product created successfully!');
+          // Reset form
+          setFormData({
+            name: '',
+            sku: '',
+            category: '',
+            price: '',
+            stock: '',
+          });
+          if (onSubmitSuccess) {
+            onSubmitSuccess();
+          }
+        }
       }
     } catch (error) {
-      alert(error.message || 'Failed to create product');
+      alert(error.message || `Failed to ${isEditMode ? 'update' : 'create'} product`);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleFormSubmit} className="space-y-6">
+    <>
+      <style>{`
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        input[type="number"] {
+          -moz-appearance: textfield;
+        }
+      `}</style>
+      <form onSubmit={handleFormSubmit} className="space-y-6">
       {/* Section 1: Basic Information */}
       <div className="bg-white rounded-lg border border-[#DEE2E6] shadow-md overflow-hidden">
         {/* Section Header */}
         <div className="px-8 py-6 bg-[#F8F9FA] border-b border-[#DEE2E6] flex items-center gap-3">
           <MdEdit className="text-[20px] text-[#6C757D]" />
           <h3 className="text-[14px] font-bold uppercase tracking-[0.08em] text-[#212529]">
-            Basic Information
+            {isEditMode ? 'Edit' : 'Basic'} Information
           </h3>
         </div>
 
@@ -154,18 +204,17 @@ const AddProductForm = () => {
             {/* Price */}
             <div>
               <label className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6C757D] mb-2">
-                Price ($)
+                Price (₹)
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#6C757D] text-[14px]">$</span>
+                <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#6C757D] text-[14px]">₹</span>
                 <input
                   type="number"
                   name="price"
                   value={formData.price}
                   onChange={handleChange}
-                  placeholder="0.00"
+                  placeholder="500"
                   min="0"
-                  step="0.01"
                   disabled={loading}
                   className="w-full h-11 bg-white border border-[#DEE2E6] rounded-lg pl-8 pr-4 text-[14px] placeholder-[#ADB5BD] focus:outline-none focus:border-[#000000] focus:ring-1 focus:ring-[#000000] transition-colors disabled:opacity-50"
                 />
@@ -182,7 +231,7 @@ const AddProductForm = () => {
                 name="stock"
                 value={formData.stock}
                 onChange={handleChange}
-                placeholder="0"
+                placeholder="10"
                 min="0"
                 disabled={loading}
                 className="w-full h-11 bg-white border border-[#DEE2E6] rounded-lg px-4 text-[14px] placeholder-[#ADB5BD] focus:outline-none focus:border-[#000000] focus:ring-1 focus:ring-[#000000] transition-colors disabled:opacity-50"
@@ -198,7 +247,6 @@ const AddProductForm = () => {
                 type="number"
                 placeholder="5"
                 min="0"
-                disabled={true}
                 className="w-full h-11 bg-white border border-[#DEE2E6] rounded-lg px-4 text-[14px] placeholder-[#ADB5BD] focus:outline-none focus:border-[#000000] focus:ring-1 focus:ring-[#000000] transition-colors disabled:opacity-50"
               />
             </div>
@@ -221,10 +269,11 @@ const AddProductForm = () => {
           className="px-8 py-2 bg-[#000000] text-white rounded-lg text-[14px] font-semibold hover:bg-[#1A1A1A] transition-colors flex items-center gap-2 disabled:opacity-50"
         >
           <span>✓</span>
-          {loading ? 'Saving...' : 'Save Product'}
+          {loading ? 'Saving...' : isEditMode ? 'Update Product' : 'Save Product'}
         </button>
       </div>
     </form>
+    </>
   );
 };
 

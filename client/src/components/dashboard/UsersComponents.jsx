@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { MdPersonAdd, MdSearch, MdTune, MdEdit, MdDelete } from 'react-icons/md';
+import { useNavigate } from 'react-router-dom';
 import { getUsers, addUser, updateUser, deleteUser } from '../../api.js';
+import ConfirmationModal from '../common/ConfirmationModal';
 
 const UsersHeader = ({ onAddClick, loading }) => {
   return (
@@ -21,19 +23,21 @@ const UsersHeader = ({ onAddClick, loading }) => {
   );
 };
 
-const UsersTable = () => {
+const UsersTable = ({ showAddForm, setShowAddForm }) => {
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const [showAddForm, setShowAddForm] = useState(false);
   const [newUserName, setNewUserName] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPhone, setNewUserPhone] = useState('');
   const [newUserRole, setNewUserRole] = useState('staff');
   const [addingUser, setAddingUser] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [deleteUserId, setDeleteUserId] = useState(null);
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -89,15 +93,33 @@ const UsersTable = () => {
   };
 
   const handleDeleteUser = async (userId) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      try {
-        await deleteUser(userId);
-        await fetchUsers();
-        setError(null);
-      } catch (err) {
-        setError(err.message || 'Failed to delete user');
-      }
+    setDeleteUserId(userId);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const onConfirmDelete = async () => {
+    if (!deleteUserId) return;
+
+    try {
+      await deleteUser(deleteUserId);
+      setUsers(users.filter(u => u._id !== deleteUserId && u.id !== deleteUserId));
+      setTotalCount(totalCount - 1);
+      setIsDeleteConfirmOpen(false);
+      setDeleteUserId(null);
+    } catch (err) {
+      setError(err.message || 'Failed to delete user');
+      setIsDeleteConfirmOpen(false);
+      setDeleteUserId(null);
     }
+  };
+
+  const onCancelDelete = () => {
+    setIsDeleteConfirmOpen(false);
+    setDeleteUserId(null);
+  };
+
+  const handleEditUser = (userId) => {
+    navigate(`/users/edit/${userId}`);
   };
 
   const getRoleBadge = (role) => {
@@ -328,6 +350,12 @@ const UsersTable = () => {
                       {/* Actions */}
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <button 
+                            onClick={() => handleEditUser(user._id || user.id)}
+                            className="text-[#000] hover:text-[#0056b3] transition-colors"
+                          >
+                            <MdEdit className="text-[20px]" />
+                          </button>
                           <button
                             onClick={() => handleDeleteUser(user._id || user.id)}
                             className="text-[#DC3545] hover:text-[#c82333] transition-colors"
@@ -387,6 +415,18 @@ const UsersTable = () => {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={isDeleteConfirmOpen}
+        title="Delete User"
+        message="Are you sure you want to delete this user? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={onConfirmDelete}
+        onCancel={onCancelDelete}
+        isDangerous={true}
+      />
     </>
   );
 };

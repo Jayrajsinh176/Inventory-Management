@@ -12,8 +12,7 @@ const CategoriesHeader = ({ onAddClick, loading }) => {
         </p>
       </div>
       <button 
-        onClick={onAddClick}
-        disabled={loading}
+        onClick={() => onAddClick()}
         className="bg-[#000000] text-white px-6 py-2 rounded-lg font-semibold text-[14px] hover:bg-[#1A1A1A] transition-colors flex items-center gap-2 disabled:opacity-50"
       >
         <MdAdd className="text-[18px]" />
@@ -23,12 +22,11 @@ const CategoriesHeader = ({ onAddClick, loading }) => {
   );
 };
 
-const CategoriesGrid = () => {
+const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [showAddForm, setShowAddForm] = useState(false);
   const [addingCategory, setAddingCategory] = useState(false);
 
   // Fetch categories on mount
@@ -203,18 +201,6 @@ const CategoriesGrid = () => {
           </table>
         </div>
       </div>
-
-      {/* Add Category Button - if not in form mode */}
-      {!showAddForm && !loading && (
-        <div className="text-center">
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="px-6 py-2 border border-[#DEE2E6] rounded-lg font-semibold text-[14px] hover:bg-[#F8F9FA] transition-colors"
-          >
-            + Add New Category
-          </button>
-        </div>
-      )}
     </div>
   );
 };

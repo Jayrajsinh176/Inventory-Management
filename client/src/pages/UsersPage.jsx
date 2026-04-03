@@ -20,12 +20,12 @@ const UsersPage = () => {
         <main className="p-8">
           {/* Users Header */}
           <UsersHeader 
-            onAddClick={() => setShowAddForm(!showAddForm)} 
+            onAddClick={() => setShowAddForm(true)} 
             loading={false}
           />
 
           {/* Users Table */}
-          <UsersTable />
+          <UsersTable showAddForm={showAddForm} setShowAddForm={setShowAddForm} />
         </main>
       </div>
     </div>

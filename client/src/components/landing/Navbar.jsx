@@ -1,15 +1,30 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { AuthService, logoutUser } from '../../api';
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    // Check if user is authenticated
+    setIsAuthenticated(AuthService.isAuthenticated());
+  }, []);
+
+  const handleLogout = () => {
+    logoutUser();
+    setIsAuthenticated(false);
+    setMenuOpen(false);
+    navigate('/');
+  };
 
   const scrollTo = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
@@ -88,40 +103,83 @@ const Navbar = () => {
 
         {/* Desktop CTA */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }} className="hidden-mobile">
-          <Link
-            to="/login"
-            style={{
-              fontFamily: 'Inter, sans-serif',
-              fontSize: 14,
-              fontWeight: 500,
-              color: '#586065',
-              textDecoration: 'none',
-              transition: 'color 0.2s',
-            }}
-            onMouseEnter={e => e.currentTarget.style.color = '#455f87'}
-            onMouseLeave={e => e.currentTarget.style.color = '#586065'}
-          >
-            Log In
-          </Link>
-          <Link
-            to="/register"
-            style={{
-              fontFamily: 'Manrope, sans-serif',
-              fontSize: 14,
-              fontWeight: 700,
-              color: '#f6f7ff',
-              backgroundColor: '#455f87',
-              padding: '10px 22px',
-              borderRadius: 8,
-              textDecoration: 'none',
-              transition: 'background-color 0.2s, transform 0.1s',
-              display: 'inline-block',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#39537a'; }}
-            onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#455f87'; }}
-          >
-            Get Started Free
-          </Link>
+          {isAuthenticated ? (
+            <>
+              <Link
+                to="/dashboard"
+                style={{
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: '#586065',
+                  textDecoration: 'none',
+                  transition: 'color 0.2s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = '#455f87'}
+                onMouseLeave={e => e.currentTarget.style.color = '#586065'}
+              >
+                Dashboard
+              </Link>
+              <button
+                onClick={handleLogout}
+                style={{
+                  fontFamily: 'Manrope, sans-serif',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: '#f6f7ff',
+                  backgroundColor: '#DC3545',
+                  padding: '10px 22px',
+                  borderRadius: 8,
+                  textDecoration: 'none',
+                  transition: 'background-color 0.2s, transform 0.1s',
+                  display: 'inline-block',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#C82333'; }}
+                onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#DC3545'; }}
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                style={{
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: '#586065',
+                  textDecoration: 'none',
+                  transition: 'color 0.2s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = '#455f87'}
+                onMouseLeave={e => e.currentTarget.style.color = '#586065'}
+              >
+                Log In
+              </Link>
+              <Link
+                to="/register"
+                style={{
+                  fontFamily: 'Manrope, sans-serif',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: '#f6f7ff',
+                  backgroundColor: '#455f87',
+                  padding: '10px 22px',
+                  borderRadius: 8,
+                  textDecoration: 'none',
+                  transition: 'background-color 0.2s, transform 0.1s',
+                  display: 'inline-block',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#39537a'; }}
+                onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#455f87'; }}
+              >
+                Get Started Free
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile Hamburger */}
@@ -156,8 +214,17 @@ const Navbar = () => {
             </button>
           ))}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 16, borderTop: '1px solid #eaeef2' }}>
-            <Link to="/login" style={{ fontSize: 14, color: '#586065', textDecoration: 'none' }}>Log In</Link>
-            <Link to="/register" style={{ fontSize: 14, fontWeight: 700, color: '#f6f7ff', backgroundColor: '#455f87', padding: '10px 16px', borderRadius: 8, textDecoration: 'none', textAlign: 'center' }}>Get Started Free</Link>
+            {isAuthenticated ? (
+              <>
+                <Link to="/dashboard" style={{ fontSize: 14, color: '#586065', textDecoration: 'none' }}>Dashboard</Link>
+                <button onClick={handleLogout} style={{ fontSize: 14, fontWeight: 700, color: '#f6f7ff', backgroundColor: '#DC3545', padding: '10px 16px', borderRadius: 8, textDecoration: 'none', textAlign: 'center', border: 'none', cursor: 'pointer' }}>Logout</button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" style={{ fontSize: 14, color: '#586065', textDecoration: 'none' }}>Log In</Link>
+                <Link to="/register" style={{ fontSize: 14, fontWeight: 700, color: '#f6f7ff', backgroundColor: '#455f87', padding: '10px 16px', borderRadius: 8, textDecoration: 'none', textAlign: 'center' }}>Get Started Free</Link>
+              </>
+            )}
           </div>
         </div>
       )}

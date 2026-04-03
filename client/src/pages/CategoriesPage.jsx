@@ -1,8 +1,11 @@
 import Sidebar from '../components/dashboard/Sidebar';
 import Header from '../components/dashboard/Header';
 import { CategoriesHeader, CategoriesGrid } from '../components/dashboard/CategoriesComponents';
+import { useState } from 'react';
 
 const CategoriesPage = () => {
+  const [showAddForm, setShowAddForm] = useState(false);
+
   return (
     <div className="flex bg-[#F8F9FA] min-h-screen">
       {/* Sidebar */}
@@ -16,10 +19,10 @@ const CategoriesPage = () => {
         {/* Page Content */}
         <main className="p-8">
           {/* Categories Header */}
-          <CategoriesHeader />
+          <CategoriesHeader onAddClick={() => setShowAddForm(true)} />
 
           {/* Categories Grid */}
-          <CategoriesGrid />
+          <CategoriesGrid showAddForm={showAddForm} setShowAddForm={setShowAddForm} />
         </main>
       </div>
     </div>

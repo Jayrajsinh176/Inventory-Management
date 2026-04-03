@@ -364,10 +364,16 @@ export async function deleteCategory(categoryId) {
 
 /**
  * Get all users for the company
+ * @param {Object} options - Query options { page: 0, limit: 10, search: searchTerm }
  * @returns {Promise<Object>} Users list
  */
-export async function getUsers() {
-  const response = await fetch(`${API_BASE_URL}/api/users`, {
+export async function getUsers(options = {}) {
+  const params = new URLSearchParams();
+  if (options.page !== undefined) params.append('page', options.page);
+  if (options.limit !== undefined) params.append('limit', options.limit);
+  if (options.search) params.append('search', options.search);
+
+  const response = await fetch(`${API_BASE_URL}/api/users?${params}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -379,6 +385,29 @@ export async function getUsers() {
 
   if (!response.ok) {
     throw new Error(data.message || 'Failed to fetch users');
+  }
+
+  return data;
+}
+
+/**
+ * Get a single user by ID
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} User details
+ */
+export async function getUserById(userId) {
+  const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeader(),
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Failed to fetch user');
   }
 
   return data;
