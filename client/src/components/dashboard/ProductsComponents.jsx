@@ -1,7 +1,7 @@
-import { MdAdd, MdEdit, MdFilterList, MdDelete } from 'react-icons/md';
+import { MdAdd, MdEdit, MdDelete } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { getProducts, deleteProduct } from '../../api';
+import { getProducts, deleteProduct, getCategories } from '../../api';
 import ConfirmationModal from '../common/ConfirmationModal';
 
 const ProductsHeader = () => {
@@ -91,11 +91,29 @@ const ProductsTable = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [stockFilter, setStockFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [deleteProductId, setDeleteProductId] = useState(null);
+  const [categories, setCategories] = useState([]);
   const limit = 10;
+
+  // Fetch categories for filter
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await getCategories();
+        if (response.data) {
+          setCategories(response.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch categories:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -105,11 +123,22 @@ const ProductsTable = () => {
           page: currentPage,
           limit: limit,
           search: searchTerm,
+          category: categoryFilter,
         });
 
         if (response.products) {
-          setProducts(response.products);
-          setTotalCount(response.count || response.products.length);
+          // Apply stock filter on client side
+          let filteredProducts = response.products;
+          if (stockFilter) {
+            filteredProducts = filteredProducts.filter(product => {
+              if (stockFilter === 'in-stock') return product.stock > 5;
+              if (stockFilter === 'low-stock') return product.stock > 0 && product.stock <= 5;
+              if (stockFilter === 'out-of-stock') return product.stock === 0;
+              return true;
+            });
+          }
+          setProducts(filteredProducts);
+          setTotalCount(response.count || filteredProducts.length);
         } else {
           setProducts([]);
         }
@@ -123,7 +152,7 @@ const ProductsTable = () => {
     };
 
     fetchProducts();
-  }, [currentPage, searchTerm]);
+  }, [currentPage, searchTerm, categoryFilter, stockFilter]);
 
   const getStatusColor = (stock) => {
     if (stock > 5) {
@@ -176,28 +205,87 @@ const ProductsTable = () => {
   }
 
   return (
-    <div className="bg-white rounded-lg border border-[#DEE2E6] shadow-md overflow-hidden">
-      {/* Header Stats */}
-      <div className="px-6 py-4 bg-[#F8F9FA] border-b border-[#DEE2E6] flex items-center justify-between">
-        <span className="text-[14px] text-[#6C757D] font-medium">
-          Showing {currentPage * limit + 1}–{Math.min((currentPage + 1) * limit, totalCount)} of {totalCount} products
-        </span>
-        <div className="flex items-center gap-3">
-          <input
-            type="text"
-            placeholder="Search products..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(0);
-            }}
-            className="px-3 py-2 border border-[#DEE2E6] rounded-md text-[13px] placeholder-[#ADB5BD] focus:outline-none focus:border-[#000000]"
-          />
-          <button className="px-3 py-2 border border-[#DEE2E6] rounded-md text-[13px] hover:bg-[#F8F9FA] transition-colors">
-            <MdFilterList className="text-[18px]" />
-          </button>
+    <>
+      {/* Search & Filter Section */}
+      <div className="bg-white rounded-lg border border-[#DEE2E6] shadow-md overflow-hidden mb-6">
+        <div className="px-6 py-4 bg-[#F8F9FA] border-b border-[#DEE2E6] space-y-4">
+          {/* Search */}
+          <div>
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(0);
+              }}
+              className="w-full px-3 py-2 border border-[#DEE2E6] rounded-md text-[13px] placeholder-[#ADB5BD] focus:outline-none focus:border-[#000000]"
+            />
+          </div>
+
+          {/* Filter Panel */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Category Filter */}
+            <div>
+              <label className="block text-[12px] font-semibold text-[#6C757D] uppercase mb-2">
+                Category
+              </label>
+              <select
+                value={categoryFilter}
+                onChange={(e) => {
+                  setCategoryFilter(e.target.value);
+                  setCurrentPage(0);
+                }}
+                className="w-full px-3 py-2 border border-[#DEE2E6] rounded-md text-[13px] focus:outline-none focus:border-[#000000]"
+              >
+                <option value="">All Categories</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Stock Status Filter */}
+            <div>
+              <label className="block text-[12px] font-semibold text-[#6C757D] uppercase mb-2">
+                Stock Status
+              </label>
+              <select
+                value={stockFilter}
+                onChange={(e) => {
+                  setStockFilter(e.target.value);
+                  setCurrentPage(0);
+                }}
+                className="w-full px-3 py-2 border border-[#DEE2E6] rounded-md text-[13px] focus:outline-none focus:border-[#000000]"
+              >
+                <option value="">All Status</option>
+                <option value="in-stock">In Stock</option>
+                <option value="low-stock">Low Stock</option>
+                <option value="out-of-stock">Out of Stock</option>
+              </select>
+            </div>
+
+            {/* Clear Filters */}
+            <div className="flex items-end">
+              <button
+                onClick={() => {
+                  setCategoryFilter('');
+                  setStockFilter('');
+                  setCurrentPage(0);
+                }}
+                className="w-full px-3 py-2 border border-[#DEE2E6] rounded-md text-[13px] hover:bg-[#F8F9FA] transition-colors"
+              >
+                Clear Filters
+              </button>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Products Table Section */}
+      <div className="bg-white rounded-lg border border-[#DEE2E6] shadow-md overflow-hidden">
 
       {/* Table */}
       <div className="overflow-x-auto">
@@ -285,7 +373,7 @@ const ProductsTable = () => {
                       <div className="flex items-center justify-end gap-2">
                         <button 
                           onClick={() => handleEdit(product.id)}
-                          className="text-[#000] hover:text-[#0056b3] transition-colors"
+                          className="text-black hover:text-[#0056b3] transition-colors"
                         >
                           <MdEdit className="text-[20px]" />
                         </button>
@@ -352,7 +440,8 @@ const ProductsTable = () => {
         onCancel={onCancelDelete}
         isDangerous={true}
       />
-    </div>
+      </div>
+    </>
   );
 };
 

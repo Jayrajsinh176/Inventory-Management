@@ -7,10 +7,6 @@ import { AddProductForm } from '../components/dashboard/AddProductComponents';
 const AddProductPage = () => {
   const navigate = useNavigate();
 
-  const handleCancel = () => {
-    navigate('/products');
-  };
-
   return (
     <div className="flex bg-[#F8F9FA] min-h-screen">
       {/* Sidebar */}
@@ -37,16 +33,6 @@ const AddProductPage = () => {
               <p className="text-[14px] text-[#6C757D]">
                 Create a new entry in your architectural furniture catalog.
               </p>
-            </div>
-            
-            {/* Action Buttons */}
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={handleCancel}
-                className="px-6 py-2 border border-[#DEE2E6] rounded-lg text-[14px] font-semibold text-[#212529] hover:bg-[#F8F9FA] transition-colors"
-              >
-                Cancel
-              </button>
             </div>
           </div>
 

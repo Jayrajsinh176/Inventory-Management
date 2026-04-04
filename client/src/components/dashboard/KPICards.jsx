@@ -1,32 +1,76 @@
 import { MdInventory2, MdCategory, MdWarning, MdPayments, MdTrendingUp, MdTrendingDown } from 'react-icons/md';
+import { useState, useEffect } from 'react';
+import { getProductStats, getCategories } from '../../api';
 
 const KPICards = () => {
+  const [stats, setStats] = useState({
+    totalProducts: '0',
+    totalCategories: '0',
+    lowStockItems: '0',
+    inventoryValue: '₹0.00',
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      try {
+        setLoading(true);
+        const [statsResponse, categoriesResponse] = await Promise.all([
+          getProductStats(),
+          getCategories(),
+        ]);
+
+        // Extract stats from response
+        const productStats = statsResponse.stats || {};
+        const categories = categoriesResponse.data || [];
+
+        setStats({
+          totalProducts: productStats.totalProducts?.toString() || '0',
+          totalCategories: categories.length.toString(),
+          lowStockItems: productStats.lowStocksAlerts?.toString() || '0',
+          inventoryValue: `₹${parseFloat(productStats.inventoryValue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        });
+      } catch (error) {
+        console.error('Failed to fetch dashboard stats:', error);
+        setStats({
+          totalProducts: '0',
+          totalCategories: '0',
+          lowStockItems: '0',
+          inventoryValue: '₹0.00',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardStats();
+  }, []);
+
   const cards = [
     {
       label: 'Total Products',
-      value: '2,450',
+      value: stats.totalProducts,
       change: '+4.2%',
       trend: 'up',
       icon: MdInventory2,
     },
     {
       label: 'Total Categories',
-      value: '18',
-      subvalue: 'Active Segments',
+      value: stats.totalCategories,
       trend: 'neutral',
       icon: MdCategory,
     },
     {
       label: 'Low Stock Items',
-      value: '12',
-      statusLabel: 'Critical',
+      value: stats.lowStockItems,
+      statusLabel: 'Alert',
       status: 'critical',
       trend: 'down',
       icon: MdWarning,
     },
     {
       label: 'Total Inventory Value',
-      value: '$1.24M',
+      value: stats.inventoryValue,
       change: '+8.1%',
       trend: 'up',
       icon: MdPayments,
@@ -37,6 +81,23 @@ const KPICards = () => {
     if (status === 'critical') return '#DC3545';
     return '#007BFF';
   };
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-4 gap-6 mb-8">
+        {[...Array(4)].map((_, index) => (
+          <div
+            key={index}
+            className="bg-white rounded-lg border border-[#DEE2E6] p-6 shadow-md animate-pulse"
+          >
+            <div className="h-4 bg-[#E9ECEF] rounded w-3/4 mb-4"></div>
+            <div className="h-8 bg-[#E9ECEF] rounded w-1/2 mb-6"></div>
+            <div className="h-3 bg-[#E9ECEF] rounded w-2/3"></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-4 gap-6 mb-8">
@@ -58,30 +119,6 @@ const KPICards = () => {
             {card.icon && <card.icon className="text-[24px]" style={{ color: getCardColor(card.status) }} />}
           </div>
 
-          {/* Status Badge or Change Indicator */}
-          <div className="flex items-center gap-2">
-            {card.statusLabel ? (
-              <span className="inline-block px-2.5 py-1 bg-[#DC3545] text-white text-[10px] font-semibold rounded">
-                {card.statusLabel}
-              </span>
-            ) : (
-              <>
-                {card.trend === 'up' ? (
-                  <MdTrendingUp className={`text-[14px] text-[#28A745]`} />
-                ) : card.trend === 'down' ? (
-                  <MdTrendingDown className={`text-[14px] text-[#DC3545]`} />
-                ) : (
-                  <span className={`text-[14px] text-[#6C757D]`}>−</span>
-                )}
-                <span className={`text-[12px] font-semibold ${
-                  card.trend === 'up' ? 'text-[#28A745]' : card.trend === 'down' ? 'text-[#DC3545]' : 'text-[#6C757D]'
-                }`}>
-                  {card.change}
-                </span>
-                <span className="text-[12px] text-[#6C757D]">vs last month</span>
-              </>
-            )}
-          </div>
         </div>
       ))}
     </div>
