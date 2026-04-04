@@ -8,7 +8,10 @@ import {
   updateProduct,
   getLowStock,
   getProductsByCategory,
-  getProductStats
+  getProductStats,
+  getStockMovementAnalysis,
+  getCategoryPerformanceAnalysis,
+  getReorderPatternsAnalysis,
 } from "../controllers/product.controller.js";
 // import { get } from "mongoose";
 
@@ -17,8 +20,11 @@ const router = express.Router();
 router.get("/", protect, getProducts);
 router.post("/", protect, createProduct);
 router.get("/stats", protect, getProductStats);
-router.get("/low-stock",protect,getLowStock);
-router.get("/by-category/:categoryId",protect,getProductsByCategory);
+router.get("/analytics/stock-movement", protect, getStockMovementAnalysis);
+router.get("/analytics/category-performance", protect, getCategoryPerformanceAnalysis);
+router.get("/analytics/reorder-patterns", protect, getReorderPatternsAnalysis);
+router.get("/low-stock", protect, getLowStock);
+router.get("/by-category/:categoryId", protect, getProductsByCategory);
 router.get("/:id", protect, getProductById);
 router.put("/:id", protect, updateProduct);
 router.delete("/:id", protect, deleteProduct);

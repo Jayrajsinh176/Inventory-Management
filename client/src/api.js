@@ -533,6 +533,76 @@ export async function getLowStockProducts() {
   return data;
 }
 
+// ============================================
+// ANALYTICS API
+// ============================================
+
+/**
+ * Get stock movement analysis (units sold per month)
+ * @returns {Promise<Object>} Stock movement data with monthly breakdown
+ */
+export async function getStockMovementAnalysis() {
+  const response = await fetch(`${API_BASE_URL}/api/products/analytics/stock-movement`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeader(),
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Failed to fetch stock movement analysis');
+  }
+
+  return data;
+}
+
+/**
+ * Get category performance analysis (inventory value by category)
+ * @returns {Promise<Object>} Category performance data with inventory values
+ */
+export async function getCategoryPerformanceAnalysis() {
+  const response = await fetch(`${API_BASE_URL}/api/products/analytics/category-performance`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeader(),
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Failed to fetch category performance analysis');
+  }
+
+  return data;
+}
+
+/**
+ * Get reorder patterns analysis (reorder frequency)
+ * @returns {Promise<Object>} Reorder patterns data with monthly frequency
+ */
+export async function getReorderPatternsAnalysis() {
+  const response = await fetch(`${API_BASE_URL}/api/products/analytics/reorder-patterns`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeader(),
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Failed to fetch reorder patterns analysis');
+  }
+
+  return data;
+}
+
 /**
  * Get subscription plans
  * @returns {Promise<Object>} Available plans
