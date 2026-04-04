@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Category from "../models/category.model.js";
 import Product from "../models/product.model.js";
 import Company from "../models/company.model.js";
+import { logActivity } from "../utils/logActivity.js";
 
 const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
 
@@ -95,7 +96,6 @@ export const createCategory = async (req, res) => {
   try {
     let { name } = req.body;
 
-    // Type validation
     if (typeof name !== "string") {
       return res.status(400).json({
         success: false,
@@ -103,10 +103,8 @@ export const createCategory = async (req, res) => {
       });
     }
 
-    // Normalize
     name = name.trim().toLowerCase();
 
-    // Empty check
     if (!name) {
       return res.status(400).json({
         success: false,
@@ -114,7 +112,6 @@ export const createCategory = async (req, res) => {
       });
     }
 
-    // Length validation
     if (name.length < 2 || name.length > 50) {
       return res.status(400).json({
         success: false,
@@ -122,10 +119,20 @@ export const createCategory = async (req, res) => {
       });
     }
 
-    // Create (rely on DB unique index)
     const category = await Category.create({
       company: req.user.company,
       name,
+    });
+
+    await logActivity({
+      userId: req.user._id,
+      companyId: req.user.company,
+      action: "created_category",
+      details: `Created category: ${name}`,
+      metadata: {
+        categoryId: category._id,
+        categoryName: name,
+      },
     });
 
     return res.status(201).json({
@@ -195,6 +202,17 @@ export const updateCategory = async (req, res) => {
       });
     }
 
+    await logActivity({
+      userId: req.user._id,
+      companyId: req.user.company,
+      action: "updated_category",
+      details: `Updated category: ${name}`,
+      metadata: {
+        categoryId: id,
+        newName: name,
+      },
+    });
+
     return res.status(200).json({
       success: true,
       message: "Category updated successfully",
@@ -232,6 +250,17 @@ export const deleteCategory = async (req, res) => {
         message: "Category not found",
       });
     }
+
+    await logActivity({
+      userId: req.user._id,
+      companyId: req.user.company,
+      action: "deleted_category",
+      details: `Deleted category: ${deleted.name}`,
+      metadata: {
+        categoryId: id,
+        categoryName: deleted.name,
+      },
+    });
 
     return res.status(200).json({
       success: true,

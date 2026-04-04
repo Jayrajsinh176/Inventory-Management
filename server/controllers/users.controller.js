@@ -1,9 +1,11 @@
 import mongoose from "mongoose";
 import User from "../models/users.model.js";
 import Company from "../models/company.model.js";
+import Activity from "../models/activity.model.js";
 // import subscription from "../utils/subscription.js";
 
 import { canAddUsersToPlan, formatPlanUsersLimit } from "../utils/subscription.js";
+import { logActivity } from "../utils/logActivity.js";
 
 const generatePassword = () => {
     const length = 8;
@@ -133,6 +135,20 @@ export const addUsers = async (req,res) => {
             })
 
             const safeUser = await User.findById(user._id).select("-password").lean();
+
+            await logActivity({
+                userId: req.user._id,
+                companyId: req.user.company,
+                action: "added_user",
+                details: `Added user: ${name}`,
+                metadata: {
+                    newUserId: user._id,
+                    name,
+                    email,
+                    phone,
+                    role,
+                },
+            });
             
             return res.status(201).json({
                 success : true,
@@ -200,6 +216,23 @@ export const updateUsersDetails = async (req,res) => {
             })
         }
 
+        const changedFields = {};
+        if (name) changedFields.name = name;
+        if (email) changedFields.email = email;
+        if (phone) changedFields.phone = phone;
+        if (role) changedFields.role = role;
+
+        await logActivity({
+            userId: req.user._id,
+            companyId: req.user.company,
+            action: "updated_user",
+            details: `Updated user: ${user.name}`,
+            metadata: {
+                targetUserId: id,
+                updatedFields: changedFields,
+            },
+        });
+
         return res.status(200).json({
             success : true,
             message : "Staff details updated successfully.",
@@ -209,6 +242,123 @@ export const updateUsersDetails = async (req,res) => {
         return handleStaffError(res,error);
     }
 }
+
+/**
+ * @description deactivate user
+ * @route PATCH /api/user/:id/deactivate
+ * @access Protected
+ */
+
+export const deactivateUser = async (req,res) => {
+    try {
+        const id = req.params.id;
+        if(!mongoose.Types.ObjectId.isValid(id)){
+            return res.status(400).json({
+                success : false,
+                message : "Invalid user id."
+            })
+        }   
+        const user = await User.findOne({
+            _id : id,
+            company : req.user.company
+        }).select("-password").lean();
+
+        if(!user){
+            return res.status(404).json({
+                success : false,
+                message : "Staff not found."
+            })
+        }
+
+        if(user.status.value === "active"){
+            await User.findByIdAndUpdate(id,{
+                $set : {
+                    "status.value" : "inactive",
+                    "status.deactivatedAt" : new Date(),
+                    "status.deactivatedBy" : req.user._id
+                }
+            })
+
+            // Log activity
+            await logActivity({
+                userId: req.user._id,
+                companyId: req.user.company,
+                action: "deactivated_user",
+                details: `Deactivated user: ${user.name}`,
+                metadata: {
+                    targetUserId: id,
+                    targetUserName: user.name,
+                },
+            });
+
+            return res.status(200).json({
+                success : true,
+                message : "Staff deactivated successfully."
+            })
+        }
+    } catch (error) {
+        return handleStaffError(res,error);
+    }
+}
+
+/**
+ * @description activate user
+ * @route PATCH /api/user/:id/activate
+ * @access Protected
+ */ 
+
+export const activateUser = async (req,res) => {
+    try {
+        const id = req.params.id;
+        if(!mongoose.Types.ObjectId.isValid(id)){
+            return res.status(400).json({
+                success : false,
+                message : "Invalid user id."
+            })  
+        }
+        const user = await User.findOne({
+            _id : id,
+            company : req.user.company
+        }).select("-password").lean();
+
+        if(!user){
+            return res.status(404).json({
+                success : false,
+                message : "Staff not found."
+            })
+        }
+
+        if(user.status.value === "inactive"){
+            await User.findByIdAndUpdate(id,{
+                $set : {
+                    "status.value" : "active",
+                    "status.reactivatedAt" : new Date(),
+                    "status.reactivatedBy" : req.user._id
+                }
+            })
+
+            // Log activity
+            await logActivity({
+                userId: req.user._id,
+                companyId: req.user.company,
+                action: "reactivated_user",
+                details: `Reactivated user: ${user.name}`,
+                metadata: {
+                    targetUserId: id,
+                    targetUserName: user.name,
+                },
+            });
+
+            return res.status(200).json({
+                success : true,
+                message : "Staff activated successfully."
+            })
+        }
+    } catch (error) {
+        return handleStaffError(res,error);
+    }
+}
+
 
 /** 
  * @description delete user
@@ -229,12 +379,105 @@ export const deleteUser = async (req,res) => {
             company : req.user.company            
         })
 
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found.",
+            });
+        }
+
+        await logActivity({
+            userId: req.user._id,
+            companyId: req.user.company,
+            action: "deleted_user",
+            details: `Deleted user: ${user.name}`,
+            metadata: {
+                deletedUserId: id,
+                deletedUserName: user.name,
+                deletedUserEmail: user.email,
+            },
+        });
+
         return res.status(200).json({
             success : true,
             message : "Staff deleted successfully."
         })
     } catch (error) {
         return handleStaffError(res,error);
+    }
+}
+
+/**
+ * @description get user activity log with pagination
+ * @route GET /api/users/:id/activity
+ * @access Protected
+ */
+export const getUserActivity = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid user id.",
+            });
+        }
+
+        const user = await User.findOne({
+            _id: id,
+            company: req.user.company,
+        }).lean();
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found.",
+            });
+        }
+
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+        const skip = (page - 1) * limit;
+
+        const activities = await Activity.find({
+            user: id,
+            company: req.user.company,
+        })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
+        const count = await Activity.countDocuments({
+            user: id,
+            company: req.user.company,
+        });
+
+        const formattedActivities = activities.map((activity) => ({
+            id: activity._id,
+            action: activity.action,
+            details: activity.details,
+            timestamp: activity.createdAt,
+            metadata: activity.metadata,
+        }));
+
+        return res.status(200).json({
+            success: true,
+            activities: formattedActivities,
+            pagination: {
+                count: formattedActivities.length,
+                total: count,
+                page,
+                limit,
+                pages: Math.ceil(count / limit),
+            },
+        });
+    } catch (error) {
+        console.error("Get user activity error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+        });
     }
 }
 

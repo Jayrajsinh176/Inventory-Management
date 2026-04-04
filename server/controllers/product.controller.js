@@ -2,6 +2,7 @@ import mongoose, { get } from "mongoose";
 import Product from "../models/product.model.js";
 import Category from "../models/category.model.js";
 import Company from "../models/company.model.js";
+import { logActivity } from "../utils/logActivity.js";
 import {
   canAddProductToPlan,
   formatPlanProductLimit,
@@ -209,6 +210,20 @@ export const createProduct = async (req, res) => {
 
     await product.populate("category", "name");
 
+    await logActivity({
+      userId: req.user._id,
+      companyId: req.user.company,
+      action: "created_product",
+      details: `Created product: ${name}`,
+      metadata: {
+        productId: product._id,
+        sku: product.sku,
+        category: product.category._id,
+        price: product.price,
+        stock: product.stock,
+      },
+    });
+
     return res.status(201).json({
       success : true,
       message: "Product created successfully",
@@ -232,12 +247,10 @@ export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Validate ID
     if (!isValidObjectId(id)) {
       return res.status(400).json({ message: "Invalid product id" });
     }
 
-    // Find product (multi-tenant safe)
     const product = await Product.findOne({
       _id: id,
       company: req.user.company,
@@ -315,11 +328,22 @@ export const updateProduct = async (req, res) => {
       product.stock = stock;
     }
 
-    // Save
     await product.save();
 
-    // Populate category
+
     await product.populate("category", "name");
+
+    await logActivity({
+      userId: req.user._id,
+      companyId: req.user.company,
+      action: "updated_product",
+      details: `Updated product: ${product.name}`,
+      metadata: {
+        productId: product._id,
+        sku: product.sku,
+        updatedFields: Object.keys(req.body).filter(field => ["name", "sku", "category", "price", "stock"].includes(field)),
+      },
+    });
 
     return res.status(200).json({
       success: true,
@@ -350,6 +374,19 @@ export const deleteProduct = async (req, res) => {
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
+
+    await logActivity({
+      userId: req.user._id,
+      companyId: req.user.company,
+      action: "deleted_product",
+      details: `Deleted product: ${product.name}`,
+      metadata: {
+        productId: product._id,
+        sku: product.sku,
+        name: product.name,
+        price: product.price,
+      },
+    });
 
     return res.status(200).json({
       message: "Product deleted successfully",
