@@ -490,6 +490,50 @@ export async function deleteUser(userId) {
 // ============================================
 
 /**
+ * Get product statistics for dashboard
+ * @returns {Promise<Object>} Product stats including inventory value, low stock alerts, etc.
+ */
+export async function getProductStats() {
+  const response = await fetch(`${API_BASE_URL}/api/products/stats`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeader(),
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Failed to fetch product stats');
+  }
+
+  return data;
+}
+
+/**
+ * Get low stock products
+ * @returns {Promise<Object>} Low stock products list
+ */
+export async function getLowStockProducts() {
+  const response = await fetch(`${API_BASE_URL}/api/products/low-stock`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeader(),
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Failed to fetch low stock products');
+  }
+
+  return data;
+}
+
+/**
  * Get subscription plans
  * @returns {Promise<Object>} Available plans
  */

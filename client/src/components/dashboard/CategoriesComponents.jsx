@@ -26,6 +26,7 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [addingCategory, setAddingCategory] = useState(false);
 
@@ -84,6 +85,11 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
     }
   };
 
+  // Filter categories based on search term
+  const filteredCategories = categories.filter(category =>
+    category.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       {/* Add Category Form */}
@@ -127,7 +133,31 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
         </div>
       )}
 
-      {/* Categories Table */}
+      {/* Search & Filter Section */}
+      <div className="bg-white rounded-lg border border-[#DEE2E6] shadow-md overflow-hidden">
+        <div className="px-6 py-4 bg-[#F8F9FA] border-b border-[#DEE2E6] space-y-4">
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              placeholder="Search categories..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1 px-4 py-2 border border-[#DEE2E6] rounded-md text-[13px] placeholder-[#ADB5BD] focus:outline-none focus:border-[#000000]"
+            />
+            <button
+              onClick={() => setSearchTerm('')}
+              className="px-3 py-2 border border-[#DEE2E6] rounded-md text-[12px] hover:bg-[#F8F9FA] transition-colors"
+            >
+              Clear
+            </button>
+          </div>
+          <span className="block text-[12px] text-[#6C757D] font-medium">
+            Showing {filteredCategories.length} of {categories.length} categories
+          </span>
+        </div>
+      </div>
+
+      {/* Categories Table Section */}
       <div className="bg-white rounded-lg border border-[#DEE2E6] shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -151,14 +181,14 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
                     Loading categories...
                   </td>
                 </tr>
-              ) : categories.length === 0 ? (
+              ) : filteredCategories.length === 0 ? (
                 <tr>
                   <td colSpan="3" className="px-6 py-4 text-center text-[#6C757D]">
                     No categories found
                   </td>
                 </tr>
               ) : (
-                categories.map((category) => (
+                filteredCategories.map((category) => (
                   <tr
                     key={category.id}
                     className="border-b border-[#F1F3F5] hover:bg-[#F8F9FA] transition-colors duration-100"
@@ -166,7 +196,7 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
                     {/* Category Name */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-[#F1F3F5]">
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-[#F1F3F5]">
                           <span style={{ color: '#6C757D', fontSize: '20px' }}>●</span>
                         </div>
                         <p className="text-[14px] font-semibold text-[#212529]">{category.name}</p>

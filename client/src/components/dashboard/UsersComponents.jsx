@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MdPersonAdd, MdSearch, MdTune, MdEdit, MdDelete } from 'react-icons/md';
+import { MdPersonAdd, MdSearch, MdEdit, MdDelete } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { getUsers, addUser, updateUser, deleteUser } from '../../api.js';
 import ConfirmationModal from '../common/ConfirmationModal';
@@ -29,6 +29,8 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [newUserName, setNewUserName] = useState('');
@@ -42,7 +44,7 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
 
   useEffect(() => {
     fetchUsers();
-  }, [searchTerm, currentPage]);
+  }, [searchTerm, currentPage, roleFilter, statusFilter]);
 
   const fetchUsers = async () => {
     try {
@@ -52,8 +54,25 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
         page: currentPage,
         limit: itemsPerPage,
       });
-      setUsers(response.data || []);
-      setTotalCount(response.meta?.total || 0);
+      
+      let filteredUsers = response.data || [];
+      
+      // Apply role filter
+      if (roleFilter) {
+        filteredUsers = filteredUsers.filter(user => 
+          user.role?.toLowerCase() === roleFilter.toLowerCase()
+        );
+      }
+      
+      // Apply status filter
+      if (statusFilter) {
+        filteredUsers = filteredUsers.filter(user => 
+          (user.status || 'active').toLowerCase() === statusFilter.toLowerCase()
+        );
+      }
+      
+      setUsers(filteredUsers);
+      setTotalCount(response.meta?.total || filteredUsers.length);
       setError(null);
     } catch (err) {
       setError(err.message || 'Failed to fetch users');
@@ -240,34 +259,88 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
         </div>
       )}
 
-      <div className="bg-white border border-[#DEE2E6] rounded-lg shadow-md overflow-hidden">
-        {/* Header with Search and Filters */}
-        <div className="px-6 py-4 bg-[#F8F9FA] border-b border-[#DEE2E6]">
-          <div className="flex items-center justify-between gap-4 mb-4">
-            <div className="flex-1 relative">
-              <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#ADB5BD] text-[18px]" />
-              <input
-                type="text"
-                placeholder="Search by name, email, or phone..."
-                value={searchTerm}
+      {/* Search & Filter Section */}
+      <div className="bg-white border border-[#DEE2E6] rounded-lg shadow-md overflow-hidden mb-6">
+        <div className="px-6 py-4 bg-[#F8F9FA] border-b border-[#DEE2E6] space-y-4">
+          {/* Search */}
+          <div className="flex-1 relative">
+            <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#ADB5BD] text-[18px]" />
+            <input
+              type="text"
+              placeholder="Search by name, email, or phone..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full pl-10 pr-4 py-2 border border-[#DEE2E6] rounded-lg text-[13px] placeholder-[#ADB5BD] focus:outline-none focus:border-[#000000] focus:ring-1 focus:ring-[#000000]"
+            />
+          </div>
+
+          {/* Filter Panel - Always Visible */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Role Filter */}
+            <div>
+              <label className="block text-[12px] font-semibold text-[#6C757D] uppercase mb-2">
+                Role
+              </label>
+              <select
+                value={roleFilter}
                 onChange={(e) => {
-                  setSearchTerm(e.target.value);
+                  setRoleFilter(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full pl-10 pr-4 py-2 border border-[#DEE2E6] rounded-lg text-[13px] placeholder-[#ADB5BD] focus:outline-none focus:border-[#000000] focus:ring-1 focus:ring-[#000000]"
-              />
+                className="w-full px-3 py-2 border border-[#DEE2E6] rounded-md text-[13px] focus:outline-none focus:border-[#000000]"
+              >
+                <option value="">All Roles</option>
+                <option value="admin">Admin</option>
+                <option value="staff">Staff</option>
+              </select>
             </div>
-            <button 
-              onClick={() => setShowAddForm(!showAddForm)}
-              className="px-3 py-2 border border-[#DEE2E6] rounded-lg text-[12px] font-semibold text-[#6C757D] hover:bg-white transition-colors"
-            >
-              {showAddForm ? 'Cancel' : 'New User'}
-            </button>
+
+            {/* Status Filter */}
+            <div>
+              <label className="block text-[12px] font-semibold text-[#6C757D] uppercase mb-2">
+                Status
+              </label>
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full px-3 py-2 border border-[#DEE2E6] rounded-md text-[13px] focus:outline-none focus:border-[#000000]"
+              >
+                <option value="">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+
+            {/* Clear Filters */}
+            <div className="flex items-end">
+              <button
+                onClick={() => {
+                  setRoleFilter('');
+                  setStatusFilter('');
+                  setCurrentPage(1);
+                }}
+                className="w-full px-3 py-2 border border-[#DEE2E6] rounded-md text-[13px] hover:bg-[#F8F9FA] transition-colors"
+              >
+                Clear Filters
+              </button>
+            </div>
+
           </div>
+
           <span className="text-[12px] text-[#6C757D] font-medium">
             Showing {users.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-{Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount} results
           </span>
         </div>
+      </div>
+
+      {/* Users Table Section */}
+      <div className="bg-white border border-[#DEE2E6] rounded-lg shadow-md overflow-hidden">
 
         {/* Table */}
         {users.length > 0 ? (
@@ -307,7 +380,7 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
                       {/* Name with Avatar */}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-[#007BFF] flex items-center justify-center text-white text-[12px] font-bold flex-shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-[#007BFF] flex items-center justify-center text-white text-[12px] font-bold shrink-0">
                             {getInitials(user.name)}
                           </div>
                           <div>
@@ -352,7 +425,7 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
                         <div className="flex items-center justify-end gap-2">
                           <button 
                             onClick={() => handleEditUser(user._id || user.id)}
-                            className="text-[#000] hover:text-[#0056b3] transition-colors"
+                            className="text-black hover:text-[#0056b3] transition-colors"
                           >
                             <MdEdit className="text-[20px]" />
                           </button>
@@ -416,7 +489,6 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
         )}
       </div>
 
-      {/* Delete Confirmation Modal */}
       <ConfirmationModal
         isOpen={isDeleteConfirmOpen}
         title="Delete User"

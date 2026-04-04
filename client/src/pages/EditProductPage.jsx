@@ -35,10 +35,6 @@ const EditProductPage = () => {
     }
   }, [productId]);
 
-  const handleCancel = () => {
-    navigate('/products');
-  };
-
   const handleSubmitSuccess = () => {
     navigate('/products');
   };
@@ -69,16 +65,6 @@ const EditProductPage = () => {
               <p className="text-[14px] text-[#6C757D]">
                 Update product details and inventory information.
               </p>
-            </div>
-            
-            {/* Action Buttons */}
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={handleCancel}
-                className="px-6 py-2 border border-[#DEE2E6] rounded-lg text-[14px] font-semibold text-[#212529] hover:bg-[#F8F9FA] transition-colors"
-              >
-                Cancel
-              </button>
             </div>
           </div>
 

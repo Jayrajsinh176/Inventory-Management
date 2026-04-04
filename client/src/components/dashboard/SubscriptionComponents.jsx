@@ -1,20 +1,31 @@
 import { MdCheckCircle, MdWarning, MdDone, MdReceiptLong } from 'react-icons/md';
+import { useState, useEffect } from 'react';
+import { getPlans, getProducts, getUsers, AuthService } from '../../api';
 
 const CurrentPlanBanner = () => {
+  const [currentPlan, setCurrentPlan] = useState(null);
+
+  useEffect(() => {
+    const company = AuthService.getCompany();
+    if (company) {
+      setCurrentPlan(company.plan || 'basic');
+    }
+  }, []);
+
   return (
     <div className="bg-white border border-[#DEE2E6] rounded-lg p-6 shadow-md mb-8">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-4">
-            <h3 className="text-[18px] font-semibold text-[#212529]">Pro Plan</h3>
+            <h3 className="text-[18px] font-semibold text-[#212529]">{currentPlan ? currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1) : 'Basic'} Plan</h3>
             <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#D4EDDA] border border-[#C3E6CB] rounded-full text-[11px] font-semibold text-[#155724]">
               <MdCheckCircle className="text-[14px]" />
               Active
             </span>
           </div>
           <div className="space-y-1 text-[14px] text-[#6C757D]">
-            <p>Next billing date: <span className="font-semibold text-[#212529]">November 12, 2024</span></p>
-            <p>Renewal date: <span className="font-semibold text-[#212529]">October 12, 2025</span></p>
+            <p>Next billing date: <span className="font-semibold text-[#212529]">-</span></p>
+            <p>Renewal date: <span className="font-semibold text-[#212529]">-</span></p>
           </div>
         </div>
 
@@ -33,9 +44,51 @@ const CurrentPlanBanner = () => {
 };
 
 const UsageProgressBar = () => {
-  const used = 45;
-  const total = 50;
-  const percentage = (used / total) * 100;
+  const [usage, setUsage] = useState({ products: 0, users: 0, maxProducts: 50, maxUsers: 10 });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUsage = async () => {
+      try {
+        setLoading(true);
+        const [productsRes, usersRes] = await Promise.all([
+          getProducts({ limit: 1000 }),
+          getUsers({ limit: 1000 }),
+        ]);
+
+        const productCount = productsRes.count || 0;
+        const userCount = usersRes.count || 0;
+
+        // Get max limits from company plan
+        const company = AuthService.getCompany();
+        const planKey = company?.plan || 'basic';
+        
+        // Fetch plans to get limits
+        const plansRes = await getPlans();
+        const plans = plansRes.data || [];
+        const currentPlan = plans.find(p => p.id === planKey);
+
+        const maxProducts = currentPlan?.maxProducts === 'unlimited' ? 1000 : (currentPlan?.maxProducts || 50);
+        const maxUsers = currentPlan?.maxUsers === 'unlimited' ? 1000 : (currentPlan?.maxUsers || 10);
+
+        setUsage({
+          products: productCount,
+          users: userCount,
+          maxProducts,
+          maxUsers,
+        });
+      } catch (error) {
+        console.error('Failed to fetch usage:', error);
+        setUsage({ products: 0, users: 0, maxProducts: 50, maxUsers: 10 });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsage();
+  }, []);
+
+  const percentage = (usage.products / usage.maxProducts) * 100;
   const isNearLimit = percentage > 80;
 
   return (
@@ -45,7 +98,7 @@ const UsageProgressBar = () => {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-[14px] text-[#6C757D]">Products</span>
-          <span className="text-[14px] font-semibold text-[#212529]">{used} / {total}</span>
+          <span className="text-[14px] font-semibold text-[#212529]">{usage.products} / {usage.maxProducts === 1000 ? '∞' : usage.maxProducts}</span>
         </div>
 
         {/* Progress Bar */}
@@ -54,7 +107,7 @@ const UsageProgressBar = () => {
             className={`h-full rounded-full transition-all duration-300 ${
               isNearLimit ? 'bg-[#FFC107]' : 'bg-[#000000]'
             }`}
-            style={{ width: `${percentage}%` }}
+            style={{ width: `${Math.min(percentage, 100)}%` }}
           ></div>
         </div>
 
@@ -73,69 +126,85 @@ const UsageProgressBar = () => {
 };
 
 const PlanUpgradeCards = () => {
-  const plans = [
-    {
-      name: 'Basic',
-      description: 'For solo architects and hobbyists',
-      price: '$29',
-      period: '/month',
-      features: ['Up to 10 products', 'Basic analytics', 'Email support'],
-      cta: 'Downgrade',
-      isCurrent: false,
-    },
-    {
-      name: 'Pro',
-      description: 'Ideal for small architectural firms',
-      price: '$79',
-      period: '/month',
-      features: ['Up to 50 products', 'Advanced analytics', 'Priority support'],
-      cta: 'Current Plan',
-      isCurrent: true,
-      badge: 'Current',
-    },
-    {
-      name: 'Business',
-      description: 'For large-scale enterprise workflows',
-      price: '$199',
-      period: '/month',
-      features: ['Unlimited products', 'Custom analytics', '24/7 support'],
-      cta: 'Upgrade',
-      isCurrent: false,
-    },
-  ];
+  const [plans, setPlans] = useState([]);
+  const [currentPlanId, setCurrentPlanId] = useState('basic');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        setLoading(true);
+        const company = AuthService.getCompany();
+        setCurrentPlanId(company?.plan || 'basic');
+
+        const response = await getPlans();
+        const plansData = response.data || [];
+        setPlans(plansData);
+      } catch (error) {
+        console.error('Failed to fetch plans:', error);
+        setPlans([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPlans();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="mb-8">
+        <h3 className="text-[18px] font-semibold text-[#212529] mb-6">Upgrade Options</h3>
+        <div className="grid grid-cols-3 gap-6">
+          {[...Array(3)].map((_, index) => (
+            <div key={index} className="bg-white rounded-lg border border-[#DEE2E6] p-6 shadow-md animate-pulse">
+              <div className="h-6 bg-[#E9ECEF] rounded w-20 mb-4"></div>
+              <div className="h-4 bg-[#E9ECEF] rounded w-full mb-6"></div>
+              <div className="space-y-2">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-3 bg-[#E9ECEF] rounded w-3/4"></div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mb-8">
       <h3 className="text-[18px] font-semibold text-[#212529] mb-6">Upgrade Options</h3>
 
       <div className="grid grid-cols-3 gap-6">
-        {plans.map((plan, index) => (
+        {plans.map((plan) => (
           <div
-            key={index}
+            key={plan.id}
             className={`rounded-lg border p-6 shadow-md transition-all duration-150 ${
-              plan.isCurrent
+              plan.id === currentPlanId
                 ? 'border-[#000000] bg-white shadow-xl'
                 : 'border-[#DEE2E6] bg-white hover:border-[#000000]'
             }`}
           >
-            {plan.badge && (
+            {plan.id === currentPlanId && (
               <span className="inline-block px-3 py-1 bg-[#000000] text-white text-[11px] font-semibold rounded-full mb-3">
-                {plan.badge}
+                Current
               </span>
             )}
 
-            <h4 className="text-[18px] font-semibold text-[#212529] mb-2">{plan.name}</h4>
-            <p className="text-[13px] text-[#6C757D] mb-4">{plan.description}</p>
+            <h4 className="text-[18px] font-semibold text-[#212529] mb-2 capitalize">{plan.label}</h4>
+            <p className="text-[13px] text-[#6C757D] mb-4">Plan for your needs</p>
 
-            {/* Price */}
+            {/* Price - if available, otherwise show info */}
             <div className="mb-4">
-              <span className="text-[28px] font-bold text-[#212529]">{plan.price}</span>
-              <span className="text-[13px] text-[#6C757D]">{plan.period}</span>
+              <span className="text-[14px] text-[#6C757D]">
+                Max Products: <span className="text-[#212529] font-semibold">{plan.maxProducts === 'unlimited' ? '∞' : plan.maxProducts}</span>
+              </span>
             </div>
 
             {/* Features */}
             <ul className="space-y-2 mb-6">
-              {plan.features.map((feature, i) => (
+              {plan.features?.map((feature, i) => (
                 <li key={i} className="flex items-start gap-2 text-[13px] text-[#6C757D]">
                   <MdDone className="text-[16px] text-[#28A745] mt-0.5" />
                   <span>{feature}</span>
@@ -146,12 +215,12 @@ const PlanUpgradeCards = () => {
             {/* CTA Button */}
             <button
               className={`w-full py-2 rounded-lg text-[14px] font-semibold transition-colors ${
-                plan.isCurrent
+                plan.id === currentPlanId
                   ? 'bg-[#F8F9FA] text-[#212529] border border-[#DEE2E6]'
                   : 'bg-[#000000] text-white hover:bg-[#1A1A1A]'
               }`}
             >
-              {plan.cta}
+              {plan.id === currentPlanId ? 'Current Plan' : 'Upgrade'}
             </button>
           </div>
         ))}

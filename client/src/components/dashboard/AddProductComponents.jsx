@@ -1,8 +1,10 @@
 import { MdEdit, MdInventory2, MdImage } from 'react-icons/md';
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getCategories, createProduct, updateProduct } from '../../api';
 
 const AddProductForm = ({ product = null, onSubmitSuccess = null }) => {
+  const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const isEditMode = !!product;
@@ -258,6 +260,7 @@ const AddProductForm = ({ product = null, onSubmitSuccess = null }) => {
       <div className="flex items-center justify-end gap-3">
         <button 
           type="button"
+          onClick={() => navigate('/products')}
           disabled={loading}
           className="px-6 py-2 border border-[#DEE2E6] rounded-lg text-[14px] font-semibold text-[#212529] hover:bg-[#F8F9FA] transition-colors disabled:opacity-50"
         >
