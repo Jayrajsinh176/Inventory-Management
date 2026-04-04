@@ -346,36 +346,6 @@ GET /products/search
 }
 ```
 
----
-
-### ❌ NEW: Bulk Update Stock
-```
-POST /products/bulk-update-stock
-```
-**Priority**: PHASE 2
-
-**Request Body:**
-```json
-{
-  "updates": [
-    {"productId": "id1", "quantity": 50},
-    {"productId": "id2", "quantity": -10},
-    {"productId": "id3", "quantity": 25}
-  ]
-}
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "updated": 3,
-  "failed": 0,
-  "results": [...]
-}
-```
-
----
 
 ## 3️⃣ CATEGORY ENDPOINTS
 
@@ -447,53 +417,6 @@ DELETE /category/:id
 {
   "success": true,
   "message": "Category deleted successfully"
-}
-```
-
----
-
-### ❌ NEW: Get Categories with Product Count
-```
-GET /category/with-count
-```
-**Priority**: PHASE 2
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "categories": [
-    {
-      "id": "category_id",
-      "name": "Structural Materials",
-      "productCount": 45,
-      "lastUpdated": "2024-03-20T14:22:00Z"
-    }
-  ]
-}
-```
-
----
-
-### ❌ NEW: Bulk Delete Categories
-```
-POST /category/bulk-delete
-```
-**Priority**: PHASE 2
-
-**Request Body:**
-```json
-{
-  "categoryIds": ["id1", "id2", "id3"]
-}
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "deleted": 3,
-  "failed": 0
 }
 ```
 
@@ -590,61 +513,7 @@ DELETE /users/:id
 }
 ```
 
----
-
-### ❌ NEW: Get Available Roles
-```
-GET /users/roles
-```
-**Priority**: PHASE 2
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "roles": [
-    {
-      "id": "admin",
-      "name": "Administrator",
-      "permissions": ["all"]
-    },
-    {
-      "id": "staff",
-      "name": "Staff Member",
-      "permissions": ["view", "edit", "delete"]
-    }
-  ]
-}
-```
-
----
-
-### ❌ NEW: Change User Role
-```
-POST /users/:id/change-role
-```
-**Priority**: PHASE 2
-
-**Request Body:**
-```json
-{
-  "role": "admin"
-}
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "user": {...},
-  "newRole": "admin",
-  "updatedAt": "2024-03-20T14:22:00Z"
-}
-```
-
----
-
-### ❌ NEW: Get User Activity
+### ✅ NEW: Get User Activity
 ```
 GET /users/:id/activity
 ```
@@ -672,7 +541,7 @@ GET /users/:id/activity
 
 ---
 
-### ❌ NEW: Deactivate User
+###  ✅ NEW: Deactivate User
 ```
 PUT /users/:id/deactivate
 ```
@@ -690,7 +559,7 @@ PUT /users/:id/deactivate
 
 ---
 
-### ❌ NEW: Reactivate User
+### ✅ NEW: Reactivate User
 ```
 PUT /users/:id/reactivate
 ```

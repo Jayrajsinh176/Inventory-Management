@@ -44,6 +44,24 @@ const userSchema = new mongoose.Schema(
       enum: ["admin", "staff"],
       default: "staff",
     },
+    status: {
+      value: {
+        type: String,
+        enum: ["active", "inactive"],
+        default: "active"
+      },
+      deactivatedAt: Date,
+      deactivatedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+      },
+      reactivatedAt: Date,
+      reactivatedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+      },
+      reason: String
+    },
   },
   {
     timestamps: true,
