@@ -17,9 +17,9 @@ const SignupPage = () => {
       <SignupForm />
 
       {/* System status bar (CLOUD ACTIVE · SECURE NODE · VERSION) */}
-      <div className="w-full max-w-[500px] mt-6 px-2">
+      {/* <div className="w-full max-w-[500px] mt-6 px-2">
         <SystemStatusBar />
-      </div>
+      </div> */}
     </div>
   );
 };

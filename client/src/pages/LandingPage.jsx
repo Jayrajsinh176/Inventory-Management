@@ -1,20 +1,27 @@
 import Navbar from '../components/landing/Navbar';
 import HeroSection from '../components/landing/HeroSection';
+import LogoBarSection from '../components/landing/LogoBarSection';
 import FeaturesSection from '../components/landing/FeaturesSection';
 import HowItWorksSection from '../components/landing/HowItWorksSection';
-import BuiltForSection from '../components/landing/BuiltForSection';
+import DashboardPreviewSection from '../components/landing/DashboardPreviewSection';
+import BlindSpotsSection from '../components/landing/BlindSpotsSection';
 import PricingSection from '../components/landing/PricingSection';
+import BuiltForSection from '../components/landing/BuiltForSection';
+import TrustSection from '../components/landing/TrustSection';
 import CTASection from '../components/landing/CTASection';
 import Footer from '../components/landing/Footer';
 
 const LandingPage = () => {
   return (
-    <div className="min-h-screen">
+    <div style={{ minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
       {/* Sticky top navigation */}
       <Navbar />
 
-      {/* Full-bleed dark hero */}
+      {/* Light hero with dashboard mock */}
       <HeroSection />
+
+      {/* Trusted by brands */}
+      <LogoBarSection />
 
       {/* Core features grid */}
       <FeaturesSection />
@@ -22,13 +29,22 @@ const LandingPage = () => {
       {/* How it works — step-by-step */}
       <HowItWorksSection />
 
-      {/* Built for modern commerce */}
-      <BuiltForSection />
+      {/* Dashboard preview */}
+      <DashboardPreviewSection />
+
+      {/* Blind spots / benefits */}
+      <BlindSpotsSection />
 
       {/* Pricing tiers */}
       <PricingSection />
 
-      {/* Final CTA dark section */}
+      {/* Built for every model */}
+      <BuiltForSection />
+
+      {/* Trust / Security */}
+      <TrustSection />
+
+      {/* Final CTA */}
       <CTASection />
 
       {/* Footer */}

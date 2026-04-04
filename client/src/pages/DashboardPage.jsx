@@ -1,0 +1,60 @@
+import { MdAdd } from 'react-icons/md';
+import Sidebar from '../components/dashboard/Sidebar';
+import Header from '../components/dashboard/Header';
+import KPICards from '../components/dashboard/KPICards';
+import InventoryTrendChart from '../components/dashboard/InventoryTrendChart';
+import InventoryHealthFeed from '../components/dashboard/InventoryHealthFeed';
+import LowStockAlerts from '../components/dashboard/LowStockAlerts';
+
+const DashboardPage = () => {
+  return (
+    <div className="flex bg-[#F8F9FA] min-h-screen">
+      {/* Sidebar */}
+      <Sidebar />
+
+      {/* Main Content */}
+      <div className="flex-1 ml-[260px]">
+        {/* Top Header */}
+        <Header />
+
+        {/* Page Content */}
+        <main className="p-8">
+          {/* Page Header */}
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h1 className="text-[28px] font-bold text-[#212529] mb-2">
+                Inventory Overview
+              </h1>
+              <p className="text-[14px] text-[#6C757D]">
+                Real-time status of your global architecture warehouse.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button className="px-4 py-2 border border-[#DEE2E6] rounded-lg text-[14px] font-semibold text-[#212529] hover:bg-[#F8F9FA] transition-colors">
+                Export Report
+              </button>
+              <button className="px-4 py-2 bg-[#000000] text-white rounded-lg text-[14px] font-semibold hover:bg-[#1A1A1A] transition-colors flex items-center gap-2">
+                <MdAdd className="text-[18px]" />
+                Add Item
+              </button>
+            </div>
+          </div>
+
+          {/* KPI Cards */}
+          <KPICards />
+
+          {/* Inventory Trend Chart */}
+          <InventoryTrendChart />
+
+          {/* Inventory Health Feed */}
+          <InventoryHealthFeed />
+
+          {/* Low Stock Alerts Table */}
+          <LowStockAlerts />
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default DashboardPage;

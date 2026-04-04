@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { AuthService, logoutUser } from '../../api';
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -11,94 +14,227 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    // Check if user is authenticated
+    setIsAuthenticated(AuthService.isAuthenticated());
+  }, []);
+
+  const handleLogout = () => {
+    logoutUser();
+    setIsAuthenticated(false);
+    setMenuOpen(false);
+    navigate('/');
+  };
+
   const scrollTo = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
     setMenuOpen(false);
   };
 
   return (
-    <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled ? 'border-b border-white/10 backdrop-blur-md bg-[#0A0A0A]/95' : 'bg-[#0A0A0A]'
-      }`}
-    >
-      <div className="max-w-[1200px] mx-auto px-8 h-16 flex items-center justify-between">
+    <nav style={{
+      position: 'fixed',
+      top: 0,
+      width: '100%',
+      zIndex: 50,
+      backgroundColor: 'rgba(255,255,255,0.85)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      boxShadow: scrolled ? '0 1px 12px rgba(0,0,0,0.08)' : 'none',
+      transition: 'box-shadow 0.3s ease',
+    }}>
+      <div style={{
+        maxWidth: 1280,
+        margin: '0 auto',
+        padding: '0 24px',
+        height: 80,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}>
         {/* Logo */}
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-            <span className="text-black font-bold text-sm">A</span>
-          </div>
-          <span className="text-white font-semibold text-[15px] tracking-tight">
-            Silent Architect
-          </span>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          fontFamily: 'Manrope, sans-serif',
+          fontWeight: 800,
+          fontSize: 20,
+          color: '#1E3A5F',
+          letterSpacing: '-0.02em',
+        }}>
+          <span className="material-symbols-outlined" style={{
+            color: '#455f87',
+            fontSize: 24,
+            fontVariationSettings: "'FILL' 1",
+          }}>inventory_2</span>
+          StockFlow
         </div>
 
         {/* Desktop Nav Links */}
-        <div className="hidden md:flex items-center gap-8">
-          {['features', 'how-it-works', 'pricing'].map((id) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 32 }} className="hidden-mobile">
+          {[
+            { label: 'Features', id: 'features' },
+            { label: 'Pricing', id: 'pricing' },
+            { label: 'How It Works', id: 'how-it-works' },
+            { label: 'For Teams', id: 'built-for' },
+          ].map(({ label, id }) => (
             <button
               key={id}
               onClick={() => scrollTo(id)}
-              className="text-[14px] text-[#9CA3AF] hover:text-white transition-colors duration-200 capitalize"
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: 14,
+                fontWeight: 500,
+                color: '#586065',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'color 0.2s',
+                padding: 0,
+              }}
+              onMouseEnter={e => e.target.style.color = '#455f87'}
+              onMouseLeave={e => e.target.style.color = '#586065'}
             >
-              {id === 'how-it-works' ? 'How It Works' : id.charAt(0).toUpperCase() + id.slice(1)}
+              {label}
             </button>
           ))}
         </div>
 
         {/* Desktop CTA */}
-        <div className="hidden md:flex items-center gap-3">
-          <Link
-            to="/login"
-            className="text-[14px] text-[#9CA3AF] hover:text-white transition-colors duration-200"
-          >
-            Login
-          </Link>
-          <Link
-            to="/register"
-            className="px-5 py-2 bg-white text-black text-[14px] font-semibold rounded-lg hover:bg-gray-100 transition-colors duration-200"
-          >
-            Get Started
-          </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }} className="hidden-mobile">
+          {isAuthenticated ? (
+            <>
+              <Link
+                to="/dashboard"
+                style={{
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: '#586065',
+                  textDecoration: 'none',
+                  transition: 'color 0.2s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = '#455f87'}
+                onMouseLeave={e => e.currentTarget.style.color = '#586065'}
+              >
+                Dashboard
+              </Link>
+              <button
+                onClick={handleLogout}
+                style={{
+                  fontFamily: 'Manrope, sans-serif',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: '#f6f7ff',
+                  backgroundColor: '#DC3545',
+                  padding: '10px 22px',
+                  borderRadius: 8,
+                  textDecoration: 'none',
+                  transition: 'background-color 0.2s, transform 0.1s',
+                  display: 'inline-block',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#C82333'; }}
+                onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#DC3545'; }}
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                style={{
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: '#586065',
+                  textDecoration: 'none',
+                  transition: 'color 0.2s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = '#455f87'}
+                onMouseLeave={e => e.currentTarget.style.color = '#586065'}
+              >
+                Log In
+              </Link>
+              <Link
+                to="/register"
+                style={{
+                  fontFamily: 'Manrope, sans-serif',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: '#f6f7ff',
+                  backgroundColor: '#455f87',
+                  padding: '10px 22px',
+                  borderRadius: 8,
+                  textDecoration: 'none',
+                  transition: 'background-color 0.2s, transform 0.1s',
+                  display: 'inline-block',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#39537a'; }}
+                onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#455f87'; }}
+              >
+                Get Started Free
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile Hamburger */}
         <button
-          className="md:hidden text-white"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'none' }}
+          className="show-mobile"
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Toggle menu"
         >
-          <div className="space-y-1.5">
-            <span className={`block w-6 h-0.5 bg-white transition-all duration-300 ${menuOpen ? 'rotate-45 translate-y-2' : ''}`}></span>
-            <span className={`block w-6 h-0.5 bg-white transition-all duration-300 ${menuOpen ? 'opacity-0' : ''}`}></span>
-            <span className={`block w-6 h-0.5 bg-white transition-all duration-300 ${menuOpen ? '-rotate-45 -translate-y-2' : ''}`}></span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <span style={{ display: 'block', width: 22, height: 2, backgroundColor: '#2b3438', borderRadius: 2, transition: 'all 0.3s', transform: menuOpen ? 'rotate(45deg) translate(5px, 5px)' : 'none' }}></span>
+            <span style={{ display: 'block', width: 22, height: 2, backgroundColor: '#2b3438', borderRadius: 2, transition: 'all 0.3s', opacity: menuOpen ? 0 : 1 }}></span>
+            <span style={{ display: 'block', width: 22, height: 2, backgroundColor: '#2b3438', borderRadius: 2, transition: 'all 0.3s', transform: menuOpen ? 'rotate(-45deg) translate(5px, -5px)' : 'none' }}></span>
           </div>
         </button>
       </div>
 
+      {/* Bottom divider */}
+      <div style={{ height: 1, backgroundColor: '#f1f4f7', width: '100%' }}></div>
+
       {/* Mobile Menu */}
       {menuOpen && (
-        <div className="md:hidden bg-[#111111] border-t border-white/10 px-8 py-6 flex flex-col gap-4">
-          {['features', 'how-it-works', 'pricing'].map((id) => (
-            <button
-              key={id}
-              onClick={() => scrollTo(id)}
-              className="text-[14px] text-[#9CA3AF] hover:text-white text-left transition-colors"
-            >
-              {id === 'how-it-works' ? 'How It Works' : id.charAt(0).toUpperCase() + id.slice(1)}
+        <div style={{ backgroundColor: '#fff', borderTop: '1px solid #eaeef2', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {[
+            { label: 'Features', id: 'features' },
+            { label: 'Pricing', id: 'pricing' },
+            { label: 'How It Works', id: 'how-it-works' },
+            { label: 'For Teams', id: 'built-for' },
+          ].map(({ label, id }) => (
+            <button key={id} onClick={() => scrollTo(id)} style={{ fontFamily: 'Inter, sans-serif', fontSize: 14, color: '#586065', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}>
+              {label}
             </button>
           ))}
-          <div className="flex flex-col gap-3 pt-4 border-t border-white/10">
-            <Link to="/login" className="text-[14px] text-[#9CA3AF] hover:text-white">Login</Link>
-            <Link
-              to="/register"
-              className="px-5 py-2 bg-white text-black text-[14px] font-semibold rounded-lg text-center"
-            >
-              Get Started
-            </Link>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 16, borderTop: '1px solid #eaeef2' }}>
+            {isAuthenticated ? (
+              <>
+                <Link to="/dashboard" style={{ fontSize: 14, color: '#586065', textDecoration: 'none' }}>Dashboard</Link>
+                <button onClick={handleLogout} style={{ fontSize: 14, fontWeight: 700, color: '#f6f7ff', backgroundColor: '#DC3545', padding: '10px 16px', borderRadius: 8, textDecoration: 'none', textAlign: 'center', border: 'none', cursor: 'pointer' }}>Logout</button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" style={{ fontSize: 14, color: '#586065', textDecoration: 'none' }}>Log In</Link>
+                <Link to="/register" style={{ fontSize: 14, fontWeight: 700, color: '#f6f7ff', backgroundColor: '#455f87', padding: '10px 16px', borderRadius: 8, textDecoration: 'none', textAlign: 'center' }}>Get Started Free</Link>
+              </>
+            )}
           </div>
         </div>
       )}
+
+      <style>{`
+        @media (max-width: 768px) {
+          .hidden-mobile { display: none !important; }
+          .show-mobile { display: block !important; }
+        }
+      `}</style>
     </nav>
   );
 };

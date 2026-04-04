@@ -40,6 +40,13 @@ const productSchema = new mongoose.Schema(
       default: 0,
       min: [0, "Stock cannot be negative"],
     },
+
+    lowStockThreshold: {
+      type: Number,
+      required: true,
+      default: 5,
+      min: [0, "Low stock threshold cannot be negative"],
+    }
   },
   {
     timestamps: true,
