@@ -1,2 +1,0 @@
-NEW: Get User Activity
-GET /users/:id/activity

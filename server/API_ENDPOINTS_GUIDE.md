@@ -575,20 +575,6 @@ PUT /users/:id/reactivate
 }
 ```
 
----
-
-### ❌ NEW: Export Users
-```
-GET /users/export
-```
-**Priority**: PHASE 3
-
-**Query Parameters:**
-- `format` (string): csv, excel, pdf (default: csv)
-
-**Response**: File download (CSV/Excel/PDF)
-
----
 
 ## 5️⃣ DASHBOARD & ANALYTICS ENDPOINTS
 
