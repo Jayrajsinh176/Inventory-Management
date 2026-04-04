@@ -1,4 +1,4 @@
-import { MdAdd, MdEdit, MdDelete } from 'react-icons/md';
+import { MdAdd, MdEdit, MdSearch,MdDelete } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { getProducts, deleteProduct, getCategories } from '../../api';
@@ -210,7 +210,8 @@ const ProductsTable = () => {
       <div className="bg-white rounded-lg border border-[#DEE2E6] shadow-md overflow-hidden mb-6">
         <div className="px-6 py-4 bg-[#F8F9FA] border-b border-[#DEE2E6] space-y-4">
           {/* Search */}
-          <div>
+          <div className="relative">
+            <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#6C757D] text-[18px]" />
             <input
               type="text"
               placeholder="Search products..."
@@ -219,7 +220,7 @@ const ProductsTable = () => {
                 setSearchTerm(e.target.value);
                 setCurrentPage(0);
               }}
-              className="w-full px-3 py-2 border border-[#DEE2E6] rounded-md text-[13px] placeholder-[#ADB5BD] focus:outline-none focus:border-[#000000]"
+              className="w-full pl-10 pr-3 py-2 border border-[#DEE2E6] rounded-md text-[13px] placeholder-[#ADB5BD] focus:outline-none focus:border-[#000000] focus:ring-1 focus:ring-[#000000]"
             />
           </div>
 

@@ -7,11 +7,13 @@ import {
     deleteUser,
     activateUser,
     deactivateUser,
-    getUserActivity
+    getUserActivity,
+    getUserById
 } from "../controllers/users.controller.js"
 const router = express.Router();
 
 router.get("/",protect , getUsersDetails);
+router.get("/:id",protect , getUserById);
 router.post("/",protect , addUsers);
 router.patch("/:id/activate",protect,activateUser);
 router.patch("/:id/deactivate",protect,deactivateUser);
