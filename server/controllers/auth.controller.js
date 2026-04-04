@@ -5,12 +5,14 @@ import Company from "../models/company.model.js";
 
 const validRoles = ["admin", "staff"];
 
+const getCompanyId = (company) => String(company?._id ?? company ?? "");
+
 
 const generateToken = (user) =>
   jwt.sign(
     {
       id: user._id,
-      company: String(user.company),
+      company: getCompanyId(user.company),
       role: user.role,
     },
     process.env.JWT_SECRET,
@@ -21,7 +23,7 @@ const generateToken = (user) =>
 
 const buildUserResponse = (user) => ({
   id: user._id,
-  company: user.company.company_name,
+  company: getCompanyId(user.company),
   name: user.name,
   email: user.email,
   phone: user.phone,

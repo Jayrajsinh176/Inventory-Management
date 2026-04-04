@@ -69,10 +69,15 @@ export const addUsers = async (req,res) => {
     try {
         
         const companyPlanDetails = await Company.findById(req.user.company).select("plan");
-        // console.log(companyPlanDetails._id);
+        if (!companyPlanDetails) {
+            return res.status(404).json({
+                success : false,
+                message : "Company not found."
+            });
+        }
         
         const users = await User.find({
-            company : companyPlanDetails._id,
+            company : req.user.company,
         }).select("-password").lean();
         
         if(canAddUsersToPlan(companyPlanDetails.plan,users.length)){
@@ -126,11 +131,13 @@ export const addUsers = async (req,res) => {
                 password : generatePassword(),
                 role
             })
+
+            const safeUser = await User.findById(user._id).select("-password").lean();
             
             return res.status(201).json({
                 success : true,
                 message : "Staff added successfully.",
-                data : user
+                data : safeUser
             })
         }else{
             return res.status(400).json({
