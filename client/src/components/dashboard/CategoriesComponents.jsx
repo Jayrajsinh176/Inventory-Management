@@ -1,4 +1,4 @@
-import { MdAdd, MdEdit, MdDelete } from 'react-icons/md';
+import { MdAdd, MdEdit, MdDelete, MdCheck, MdClose } from 'react-icons/md';
 import { useState, useEffect } from 'react';
 import { getCategories, createCategory, deleteCategory } from '../../api';
 
@@ -29,6 +29,8 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [addingCategory, setAddingCategory] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editingName, setEditingName] = useState('');
 
   // Fetch categories on mount
   useEffect(() => {
@@ -83,6 +85,28 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
         alert(err.message || 'Failed to delete category');
       }
     }
+  };
+
+  const handleEditClick = (categoryId, categoryName) => {
+    setEditingId(categoryId);
+    setEditingName(categoryName);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingName.trim()) {
+      alert('Category name cannot be empty');
+      return;
+    }
+
+    // Show message that feature is coming soon
+    alert('Edit functionality will be available soon. You can delete and recreate the category for now.');
+    setEditingId(null);
+    setEditingName('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditingName('');
   };
 
   // Filter categories based on search term
@@ -195,12 +219,22 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
                   >
                     {/* Category Name */}
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-[#F1F3F5]">
-                          <span style={{ color: '#6C757D', fontSize: '20px' }}>●</span>
+                      {editingId === category.id ? (
+                        <input
+                          type="text"
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          className="px-3 py-1 border border-[#DEE2E6] rounded-md text-[14px] focus:outline-none focus:border-[#000000]"
+                          autoFocus
+                        />
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-[#F1F3F5]">
+                            <span style={{ color: '#6C757D', fontSize: '20px' }}>●</span>
+                          </div>
+                          <p className="text-[14px] font-semibold text-[#212529]">{category.name}</p>
                         </div>
-                        <p className="text-[14px] font-semibold text-[#212529]">{category.name}</p>
-                      </div>
+                      )}
                     </td>
 
                     {/* Product Count */}
@@ -213,15 +247,41 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
                     {/* Actions */}
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button className="p-2 text-[#6C757D] hover:text-[#212529] hover:bg-[#F1F3F5] rounded transition-colors">
-                          <MdEdit className="text-[20px]" />
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteCategory(category.id)}
-                          className="p-2 text-[#6C757D] hover:text-[#DC3545] hover:bg-[#FCE4E6] rounded transition-colors"
-                        >
-                          <MdDelete className="text-[20px]" />
-                        </button>
+                        {editingId === category.id ? (
+                          <>
+                            <button 
+                              onClick={handleSaveEdit}
+                              className="p-2 text-green-600 hover:text-green-700 hover:bg-green-100 rounded transition-colors"
+                              title="Save"
+                            >
+                              <MdCheck className="text-[20px]" />
+                            </button>
+                            <button 
+                              onClick={handleCancelEdit}
+                              className="p-2 text-[#6C757D] hover:text-[#212529] hover:bg-[#F1F3F5] rounded transition-colors"
+                              title="Cancel"
+                            >
+                              <MdClose className="text-[20px]" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button 
+                              onClick={() => handleEditClick(category.id, category.name)}
+                              className="p-2 text-[#6C757D] hover:text-[#212529] hover:bg-[#F1F3F5] rounded transition-colors"
+                              title="Edit"
+                            >
+                              <MdEdit className="text-[20px]" />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteCategory(category.id)}
+                              className="p-2 text-[#DC3545] hover:text-[#c82333] hover:bg-[#FCE4E6] rounded transition-colors"
+                              title="Delete"
+                            >
+                              <MdDelete className="text-[20px]" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

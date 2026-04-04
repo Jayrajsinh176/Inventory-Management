@@ -61,6 +61,41 @@ export const getUsersDetails = async (req,res) => {
     }
 }
 
+/** 
+ * @description get single user by ID
+ * @route GET /api/user/:id
+ * @access Protected
+ */
+export const getUserById = async (req, res) => {
+    try {
+        const userId = req.params.id;
+        
+        const user = await User.findOne({
+            _id: userId,
+            company: req.user.company,
+        }).select("-password").lean();
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            user: user
+        });
+
+    } catch (error) {
+        console.error("Error fetching user:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+}
+
 
 /** 
  * @description add user
