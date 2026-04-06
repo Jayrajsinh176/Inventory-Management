@@ -28,6 +28,7 @@ Mounted in `server/index.js`:
 - `/api/company/plan`
 - `/api/alert`
 - `/api/dashboard`
+- `/api/company`
 
 ## Current Implemented Routes And Response Details
 
@@ -43,6 +44,8 @@ Current success response:
 {
   "success": true,
   "message": "Account created successfully",
+  "token": "jwt-access-token",
+  "refreshToken": "jwt-refresh-token",
   "user": {
     "id": "userId",
     "company": "companyId",
@@ -50,9 +53,10 @@ Current success response:
     "email": "john@example.com",
     "phone": "9876543210",
     "role": "admin",
+    "status": "active",
+    "isEmailVerified": false,
     "createdAt": "2026-04-06T00:00:00.000Z"
   },
-  "token": "jwt-token",
   "company": {
     "id": "companyId",
     "company_name": "Acme",
@@ -62,16 +66,17 @@ Current success response:
     "plan": "trial",
     "subscription_start_date": "2026-04-06T00:00:00.000Z",
     "subscription_end_date": "2026-04-13T00:00:00.000Z"
-  }
+  },
+  "emailVerificationRequired": true
 }
 ```
 
 Notes:
 
 - creates both company and first admin user
-- no refresh-token flow
-- no email verification
-- no forgot-password/reset-password support
+- returns both access and refresh tokens
+- creates and sends an email verification token on signup
+- when SMTP is not configured, non-production responses include an email preview payload for local testing
 
 #### `POST /api/auth/login`
 
@@ -83,6 +88,8 @@ Current success response:
 {
   "success": true,
   "message": "Login successful",
+  "token": "jwt-access-token",
+  "refreshToken": "jwt-refresh-token",
   "user": {
     "id": "userId",
     "company": "companyId",
@@ -90,9 +97,10 @@ Current success response:
     "email": "john@example.com",
     "phone": "9876543210",
     "role": "admin",
+    "status": "active",
+    "isEmailVerified": true,
     "createdAt": "2026-04-06T00:00:00.000Z"
   },
-  "token": "jwt-token",
   "company": {
     "id": "companyId",
     "company_name": "Acme",
@@ -109,8 +117,204 @@ Current success response:
 Notes:
 
 - supports login by email or phone
-- no logout endpoint
-- no session invalidation or token blacklist
+- returns both access and refresh tokens
+- email verification can be enforced with `REQUIRE_EMAIL_VERIFICATION=true`
+- inactive users are blocked from logging in
+
+#### `POST /api/auth/forgot-password`
+
+Controller: `forgotPassword`
+
+Current success response:
+
+```json
+{
+  "success": true,
+  "message": "If an account with that email exists, password reset instructions have been sent."
+}
+```
+
+Notes:
+
+- enumeration-safe generic response
+- stores a hashed password reset token with expiry
+- when SMTP is not configured, non-production responses include the reset token inside the email preview payload
+
+#### `POST /api/auth/reset-password`
+
+Controller: `resetPassword`
+
+Current success response:
+
+```json
+{
+  "success": true,
+  "message": "Password reset successful",
+  "token": "jwt-access-token",
+  "refreshToken": "jwt-refresh-token",
+  "user": {
+    "id": "userId",
+    "company": "companyId",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phone": "9876543210",
+    "role": "admin",
+    "status": "active",
+    "isEmailVerified": true,
+    "createdAt": "2026-04-06T00:00:00.000Z"
+  }
+}
+```
+
+Notes:
+
+- requires `token` and `newPassword`
+- invalidates older access and refresh tokens by incrementing `tokenVersion`
+
+#### `POST /api/auth/refresh-token`
+
+Controller: `refreshAccessToken`
+
+Current success response:
+
+```json
+{
+  "success": true,
+  "message": "Token refreshed successfully",
+  "token": "jwt-access-token",
+  "refreshToken": "jwt-refresh-token",
+  "user": {
+    "id": "userId",
+    "company": "companyId",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phone": "9876543210",
+    "role": "admin",
+    "status": "active",
+    "isEmailVerified": true,
+    "createdAt": "2026-04-06T00:00:00.000Z"
+  },
+  "company": {
+    "id": "companyId",
+    "company_name": "Acme"
+  }
+}
+```
+
+Notes:
+
+- requires `refreshToken`
+- refresh tokens are verified separately using `JWT_REFRESH_SECRET` when provided
+- revoked sessions are rejected by comparing `tokenVersion`
+
+#### `POST /api/auth/send-verification-email`
+
+Controller: `sendVerificationEmail`
+
+Current success response:
+
+```json
+{
+  "success": true,
+  "message": "If an account with that email exists and is not verified, a verification email has been sent."
+}
+```
+
+Notes:
+
+- enumeration-safe generic response
+- resends a fresh verification token for unverified users only
+
+#### `GET /api/auth/verify-email`
+#### `POST /api/auth/verify-email`
+
+Controller: `verifyEmail`
+
+Current success response:
+
+```json
+{
+  "success": true,
+  "message": "Email verified successfully",
+  "token": "jwt-access-token",
+  "refreshToken": "jwt-refresh-token",
+  "user": {
+    "id": "userId",
+    "company": "companyId",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phone": "9876543210",
+    "role": "admin",
+    "status": "active",
+    "isEmailVerified": true,
+    "createdAt": "2026-04-06T00:00:00.000Z"
+  },
+  "company": {
+    "id": "companyId",
+    "company_name": "Acme"
+  }
+}
+```
+
+Notes:
+
+- accepts token through query string or request body
+- clears verification token after successful verification
+
+#### `POST /api/auth/change-password`
+
+Controller: `changePassword`
+
+Current success response:
+
+```json
+{
+  "success": true,
+  "message": "Password changed successfully",
+  "token": "jwt-access-token",
+  "refreshToken": "jwt-refresh-token",
+  "user": {
+    "id": "userId",
+    "company": "companyId",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phone": "9876543210",
+    "role": "admin",
+    "status": "active",
+    "isEmailVerified": true,
+    "createdAt": "2026-04-06T00:00:00.000Z"
+  },
+  "company": {
+    "id": "companyId",
+    "company_name": "Acme"
+  }
+}
+```
+
+Notes:
+
+- protected route
+- requires `oldPassword` and `newPassword`
+- invalidates older access and refresh tokens by incrementing `tokenVersion`
+
+#### `POST /api/auth/logout`
+
+Controller: `logoutUser`
+
+Current success response:
+
+```json
+{
+  "success": true,
+  "message": "Logout successful"
+}
+```
+
+Notes:
+
+- protected route
+- performs server-side token invalidation by incrementing `tokenVersion`
+- acts as logout-all-sessions for that user because previously issued tokens no longer match
 
 ### 2. Products
 
@@ -785,32 +989,33 @@ Notes:
 
 ## A. Auth and Account Management
 
-Still missing:
+Current state:
 
-- `POST /api/auth/forgot-password`
-- `POST /api/auth/reset-password`
-- `POST /api/auth/change-password`
-- `POST /api/auth/logout` if server-side token invalidation is desired
-- email verification flow
-- refresh-token flow
+- register, login, forgot-password, reset-password, change-password, logout, refresh-token, send-verification-email, and verify-email are implemented
+- server-side token invalidation is handled with `tokenVersion` on the user record
+- email delivery falls back to console preview mode when SMTP is not configured
 
-Recommended response contract:
+Still left:
 
-```json
-{
-  "success": true,
-  "message": "Password reset link sent successfully."
-}
-```
+- frontend pages or flows for `reset-password` and `verify-email` if the client app has not implemented them yet
+- production SMTP configuration and branded email templates
+- optional cookie-based refresh-token storage and token rotation if you want stronger session management
+- optional strict email-verification enforcement by setting `REQUIRE_EMAIL_VERIFICATION=true`
+- optional single-session or device-aware logout if logout-all-sessions is too broad for product needs
 
 ## B. Company Profile Management
 
-No company profile route family exists yet.
+Current state:
+
+- `GET /api/company` exists and returns the raw company document for the authenticated user
+- `PUT /api/company` exists and updates basic company profile fields
+- several subscription and billing paths are mounted, but they currently point to placeholder controller behavior and do not return real subscription or billing data
 
 Recommended routes:
 
-- `GET /api/company/profile`
-- `PUT /api/company/profile`
+- keep `GET /api/company`
+- keep `PUT /api/company`
+- implement real handlers for the mounted subscription and billing routes
 
 Recommended success response:
 
@@ -835,6 +1040,7 @@ Recommended success response:
 Current state:
 
 - only `GET /api/company/plan` exists
+- `/api/company/subscription`, `/api/company/subscription/cancel`, and billing routes are mounted but currently return placeholder company-profile data instead of real subscription or billing payloads
 
 Still missing:
 
@@ -1126,9 +1332,9 @@ Recommended health response:
 3. support `lowStockThreshold` in product create/update
 4. unify low-stock routes under one alert contract
 5. add company profile and subscription summary endpoints
-6. add forgot-password/reset-password endpoints
-7. guard category deletion when products still reference the category
-8. normalize response shapes across controllers (`success`, `message`, `data`)
+6. guard category deletion when products still reference the category
+7. normalize response shapes across controllers (`success`, `message`, `data`)
+8. decide whether refresh tokens should remain body-based or move to httpOnly cookies
 
 ## Suggested Implementation Order By Route Group
 
@@ -1141,10 +1347,9 @@ Recommended health response:
 
 ### Phase 2
 
-- `POST /api/auth/forgot-password`
-- `POST /api/auth/reset-password`
 - `PATCH /api/company/subscription`
 - `GET /api/company/subscription`
+- company profile routes
 
 ### Phase 3
 

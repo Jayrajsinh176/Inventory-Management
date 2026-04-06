@@ -22,3 +22,14 @@ export const getLowStockAlerts = async (req, res) => {
         res.status(500).json({ success: false, message: 'Server error' });
     }
 };  
+
+/**
+ * @description Mark an alert as read
+ * @route PATCH /api/alerts/:id/read
+ * @access Protected
+ */
+
+// router.patch('/:id/read', protect, );
+// router.patch('/:id/acknowledge', protect, );
+// router.get('/preferences', protect, );
+// router.put('/preferences', protect, );

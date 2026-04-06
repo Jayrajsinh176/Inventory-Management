@@ -8,7 +8,11 @@ import {
 
 const router = express.Router();
 
-router.get("/low-stock", protect , getLowStockAlerts);
 
+router.get('/low-stock', protect, getLowStockAlerts);
+router.patch('/:id/read', protect, );
+router.patch('/:id/acknowledge', protect, );
+router.get('/preferences', protect, );
+router.put('/preferences', protect, );
 
 export default router;

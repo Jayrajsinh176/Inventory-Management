@@ -39,6 +39,46 @@ const userSchema = new mongoose.Schema(
       select: false, 
     },
 
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+    emailVerifiedAt: {
+      type: Date,
+      default: null,
+    },
+
+    emailVerificationToken: {
+      type: String,
+      select: false,
+      default: null,
+    },
+
+    emailVerificationExpiresAt: {
+      type: Date,
+      select: false,
+      default: null,
+    },
+
+    passwordResetToken: {
+      type: String,
+      select: false,
+      default: null,
+    },
+
+    passwordResetExpiresAt: {
+      type: Date,
+      select: false,
+      default: null,
+    },
+
+    tokenVersion: {
+      type: Number,
+      default: 0,
+      select: false,
+    },
+
     role: {
       type: String,
       enum: ["admin", "staff"],
