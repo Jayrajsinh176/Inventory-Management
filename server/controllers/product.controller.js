@@ -16,12 +16,27 @@ const escapeRegex = (value) => {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+const buildCategoryPayload = (category) => {
+  if (!category) {
+    return null;
+  }
+
+  if (typeof category === "object") {
+    return {
+      id: category._id || category.id,
+      name: category.name,
+    };
+  }
+
+  return category;
+};
+
 const buildProductPayload = (product) => ({
   id: product._id,
   company: product.company,
   name: product.name,
   sku: product.sku,
-  category: product.category,
+  category: buildCategoryPayload(product.category),
   price: product.price,
   stock: product.stock,
   createdAt: product.createdAt,
@@ -82,8 +97,10 @@ export const getProducts = async (req, res) => {
       query.$or = [{ name: searchRegex }, { sku: searchRegex }];
     }
 
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const parsedPage = Number.parseInt(req.query.page, 10);
+    const parsedLimit = Number.parseInt(req.query.limit, 10);
+    const page = Number.isNaN(parsedPage) ? 1 : Math.max(parsedPage, 1);
+    const limit = Number.isNaN(parsedLimit) ? 10 : Math.max(parsedLimit, 1);
 
     const products = await Product.find(query)
       .populate("category", "name")
@@ -96,6 +113,9 @@ export const getProducts = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Products fetched successfully",
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
       count: total,
       products: products.map(buildProductPayload),
     });
@@ -447,9 +467,9 @@ function getOutOfStockCount(products){
 export const getProductStats = async (req, res) => {
   try {
     let query = { company : new mongoose.Types.ObjectId(req.user.company)}
-    console.log(query);
+    // console.log(query);
     let products = await Product.find(query).lean();
-    console.log(products);
+    // console.log(products);
 
 
     return res.status(200).json({

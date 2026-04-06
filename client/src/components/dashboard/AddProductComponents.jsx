@@ -3,6 +3,18 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCategories, createProduct, updateProduct } from '../../api';
 
+const getCategoryValue = (category) => {
+  if (!category) {
+    return '';
+  }
+
+  if (typeof category === 'object') {
+    return category.id || category._id || '';
+  }
+
+  return category;
+};
+
 const AddProductForm = ({ product = null, onSubmitSuccess = null }) => {
   const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
@@ -11,7 +23,7 @@ const AddProductForm = ({ product = null, onSubmitSuccess = null }) => {
   const [formData, setFormData] = useState({
     name: product?.name || '',
     sku: product?.sku || '',
-    category: product?.category?.id || product?.category || '',
+    category: getCategoryValue(product?.category),
     price: product?.price ? String(product.price) : '',
     stock: product?.stock ? String(product.stock) : '',
   });
@@ -37,7 +49,7 @@ const AddProductForm = ({ product = null, onSubmitSuccess = null }) => {
       setFormData({
         name: product.name || '',
         sku: product.sku || '',
-        category: product.category?.id || product.category || '',
+        category: getCategoryValue(product.category),
         price: product.price ? String(product.price) : '',
         stock: product.stock ? String(product.stock) : '',
       });

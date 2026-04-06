@@ -138,13 +138,19 @@ export function logoutUser() {
 
 /**
  * Get all products for the company
- * @param {Object} options - Query options { page: 0, limit: 10, category: categoryId, search: searchTerm }
+ * @param {Object} options - Query options { page: 1, limit: 10, category: categoryId, search: searchTerm }
  * @returns {Promise<Object>} Products list with pagination
  */
 export async function getProducts(options = {}) {
   const params = new URLSearchParams();
-  if (options.page !== undefined) params.append('page', options.page);
-  if (options.limit !== undefined) params.append('limit', options.limit);
+  if (options.page !== undefined) {
+    const page = Number.parseInt(options.page, 10);
+    params.append('page', Number.isNaN(page) ? 1 : Math.max(1, page));
+  }
+  if (options.limit !== undefined) {
+    const limit = Number.parseInt(options.limit, 10);
+    params.append('limit', Number.isNaN(limit) ? 10 : Math.max(1, limit));
+  }
   if (options.category) params.append('category', options.category);
   if (options.search) params.append('search', options.search);
 

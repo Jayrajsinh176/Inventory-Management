@@ -1,8 +1,15 @@
+import { useState } from 'react';
 import Sidebar from '../components/dashboard/Sidebar';
 import Header from '../components/dashboard/Header';
 import { ProductsHeader, SummaryCards, ProductsTable } from '../components/dashboard/ProductsComponents';
 
 const ProductsPage = () => {
+  const [statsRefreshKey, setStatsRefreshKey] = useState(0);
+
+  const handleProductsChanged = () => {
+    setStatsRefreshKey((currentKey) => currentKey + 1);
+  };
+
   return (
     <div className="flex bg-[#F8F9FA] min-h-screen">
       {/* Sidebar */}
@@ -19,10 +26,10 @@ const ProductsPage = () => {
           <ProductsHeader />
 
           {/* Summary Cards */}
-          <SummaryCards />
+          <SummaryCards refreshKey={statsRefreshKey} />
 
           {/* Products Table */}
-          <ProductsTable />
+          <ProductsTable onProductsChanged={handleProductsChanged} />
         </main>
       </div>
     </div>
