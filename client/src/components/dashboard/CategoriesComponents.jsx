@@ -32,7 +32,8 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
   const [addingCategory, setAddingCategory] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editingName, setEditingName] = useState('');
-  const [deleteConfirmationModal, setDeleteConfirmationModal] = useState({ isOpen: false, categoryId: null });
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [deleteCategoryId, setDeleteCategoryId] = useState(null);
   // Fetch categories on mount
   useEffect(() => {
     fetchCategories();
@@ -77,14 +78,31 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
     }
   };
 
-  const handleDeleteCategory = async (categoryId) => {
-      try {
-        await deleteCategory(categoryId);
-        await fetchCategories(); // Refresh the list
-      } catch (err) {
-        alert(err.message || 'Failed to delete category');
-      }
+  const onClickHandleDelete = async (categoryId) => {
+    setDeleteCategoryId(categoryId);
+    setIsDeleteConfirmOpen(true);
   };
+
+  const onConfirmDelete = async () => {
+      if (!deleteCategoryId) return;
+  
+      try {
+        await deleteCategory(deleteCategoryId);
+        await fetchCategories(); // Refresh the list after deletion
+        setIsDeleteConfirmOpen(false);
+        setDeleteCategoryId(null);
+      } catch (deleteError) {
+        console.error('Failed to delete category:', deleteError);
+        alert(deleteError.message || 'Failed to delete category');
+        setIsDeleteConfirmOpen(false);
+        setDeleteCategoryId(null);
+      }
+    };
+  
+    const onCancelDelete = () => {
+      setIsDeleteConfirmOpen(false);
+      setDeleteCategoryId(null);
+    };
 
   const handleEditClick = (categoryId, categoryName) => {
     setEditingId(categoryId);
@@ -285,6 +303,17 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
                             >
                               <MdDelete className="text-[20px]" />
                             </button>
+
+                            <ConfirmationModal
+                              isOpen={isDeleteConfirmOpen}
+                              title="Delete Category"
+                              message="Are you sure you want to delete this category? This action cannot be undone."
+                              confirmText="Delete"
+                              cancelText="Cancel"
+                              onConfirm={onConfirmDelete}
+                              onCancel={onCancelDelete}
+                              isDangerous={true}
+                            />
                           </>
                         )}
                       </div>
@@ -296,17 +325,8 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
           </table>
         </div>
       </div>
-      <ConfirmationModal
-        isOpen={setDeleteConfirmationModal}
-        title="Delete Category"
-        message="Are you sure you want to delete this category? This action cannot be undone."
-        confirmText="Delete"
-        cancelText="Cancel"
-        onConfirm={onConfirmDelete}
-        onCancel={onCancelDelete}
-        isDangerous={true}
-      />
     </div>
+      
   );
 };
 
