@@ -18,10 +18,10 @@ export const dashboardStats = async (req, res) => {
         const totalAlerts = await mongoose.connection.collection('alerts').countDocuments({ company: companyId, type: 'low_stock' });
         // total users
         const totalUsers = await mongoose.connection.collection('users').countDocuments({ company: companyId });
-        // inventory value
+        // inventory value - use $stock instead of $quantity (matches Product model)
         const inventoryValue = await mongoose.connection.collection('products').aggregate([
-            { $match: { company: mongoose.Types.ObjectId(companyId) } },
-            { $group: { _id: null, totalValue: { $sum: { $multiply: ["$price", "$quantity"] } } } }
+            { $match: { company: new mongoose.Types.ObjectId(companyId) } },
+            { $group: { _id: null, totalValue: { $sum: { $multiply: ["$price", "$stock"] } } } }
         ]).toArray();
         const totalInventoryValue = inventoryValue[0]?.totalValue || 0;
         res.json({

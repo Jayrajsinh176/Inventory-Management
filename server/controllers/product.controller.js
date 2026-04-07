@@ -448,7 +448,8 @@ function getAveragePrice(products){
     const stock = Number(product.stock) || 0;
     return total + (stock);
   }, 0)
-  return productPrice / productStock;
+  // Prevent division by zero
+  return productStock > 0 ? productPrice / productStock : 0;
 }
 
 function getOutOfStockCount(products){

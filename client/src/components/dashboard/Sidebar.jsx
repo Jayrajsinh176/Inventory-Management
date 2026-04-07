@@ -8,6 +8,8 @@ import {
   MdPayments,
   MdSettings,
   MdLogout,
+  MdNotifications,
+  MdPerson,
 } from 'react-icons/md';
 
 const Sidebar = () => {
@@ -68,13 +70,24 @@ const Sidebar = () => {
           active={isActive('/subscription')}
           onClick={() => navigate('/subscription')}
         />
-        {/* <NavItem
-          icon="settings"
-          label="Settings"
-          path="/settings"
-          active={isActive('/settings')}
-          onClick={() => navigate('/settings')}
-        /> */}
+        
+        {/* Divider */}
+        <div className="border-t border-[#DEE2E6] my-3"></div>
+        
+        <NavItem
+          icon="notifications"
+          label="Notifications"
+          path="/notifications"
+          active={isActive('/notifications')}
+          onClick={() => navigate('/notifications')}
+        />
+        <NavItem
+          icon="person"
+          label="My Profile"
+          path="/profile"
+          active={isActive('/profile')}
+          onClick={() => navigate('/profile')}
+        />
       </nav>
 
       {/* User Info + Logout (bottom) */}
@@ -110,6 +123,8 @@ const NavItem = ({ icon, label, active, onClick, path }) => {
     group: MdGroup,
     payments: MdPayments,
     settings: MdSettings,
+    notifications: MdNotifications,
+    person: MdPerson,
   };
 
   const IconComponent = iconMap[icon];

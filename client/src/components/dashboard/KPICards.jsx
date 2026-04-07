@@ -50,37 +50,38 @@ const KPICards = () => {
     {
       label: 'Total Products',
       value: stats.totalProducts,
-      change: '+4.2%',
-      trend: 'up',
+      description: 'Active items in inventory',
+      trend: 'neutral',
       icon: MdInventory2,
+      color: '#007BFF',
     },
     {
       label: 'Total Categories',
       value: stats.totalCategories,
+      description: 'Product categories',
       trend: 'neutral',
       icon: MdCategory,
+      color: '#28A745',
     },
     {
       label: 'Low Stock Items',
       value: stats.lowStockItems,
-      statusLabel: 'Alert',
-      status: 'critical',
+      description: parseInt(stats.lowStockItems) > 0 ? 'Items need attention' : 'All items stocked',
+      statusLabel: parseInt(stats.lowStockItems) > 0 ? 'Alert' : 'OK',
+      status: parseInt(stats.lowStockItems) > 0 ? 'critical' : 'good',
       trend: 'down',
       icon: MdWarning,
+      color: parseInt(stats.lowStockItems) > 0 ? '#DC3545' : '#28A745',
     },
     {
       label: 'Total Inventory Value',
       value: stats.inventoryValue,
-      change: '+8.1%',
+      description: 'Current stock value',
       trend: 'up',
       icon: MdPayments,
+      color: '#6610F2',
     },
   ];
-
-  const getCardColor = (status) => {
-    if (status === 'critical') return '#DC3545';
-    return '#007BFF';
-  };
 
   if (loading) {
     return (
@@ -90,8 +91,11 @@ const KPICards = () => {
             key={index}
             className="bg-white rounded-lg border border-[#DEE2E6] p-6 shadow-md animate-pulse"
           >
-            <div className="h-4 bg-[#E9ECEF] rounded w-3/4 mb-4"></div>
-            <div className="h-8 bg-[#E9ECEF] rounded w-1/2 mb-6"></div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="h-4 bg-[#E9ECEF] rounded w-3/4"></div>
+              <div className="w-10 h-10 bg-[#E9ECEF] rounded-lg"></div>
+            </div>
+            <div className="h-8 bg-[#E9ECEF] rounded w-1/2 mb-3"></div>
             <div className="h-3 bg-[#E9ECEF] rounded w-2/3"></div>
           </div>
         ))}
@@ -106,19 +110,34 @@ const KPICards = () => {
           key={index}
           className="bg-white rounded-lg border border-[#DEE2E6] p-6 shadow-md hover:shadow-lg transition-shadow duration-150"
         >
-          <div className="flex items-start justify-between mb-3">
-            <div>
-              <p className="text-[11px] uppercase font-semibold text-[#6C757D] tracking-[0.08em] mb-2">
-                {card.label}
-              </p>
-              <p className="text-[24px] font-bold text-[#212529]">{card.value}</p>
-              {card.subvalue && (
-                <p className="text-[12px] text-[#6C757D] mt-1">{card.subvalue}</p>
-              )}
+          <div className="flex items-start justify-between mb-4">
+            <p className="text-[11px] uppercase font-semibold text-[#6C757D] tracking-[0.08em]">
+              {card.label}
+            </p>
+            <div 
+              className="w-10 h-10 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: `${card.color}15` }}
+            >
+              {card.icon && <card.icon className="text-[20px]" style={{ color: card.color }} />}
             </div>
-            {card.icon && <card.icon className="text-[24px]" style={{ color: getCardColor(card.status) }} />}
           </div>
-
+          
+          <p className="text-[28px] font-bold text-[#212529] mb-2">{card.value}</p>
+          
+          <div className="flex items-center justify-between">
+            <p className="text-[12px] text-[#6C757D]">{card.description}</p>
+            {card.statusLabel && (
+              <span 
+                className={`text-[10px] font-semibold px-2 py-1 rounded ${
+                  card.status === 'critical' 
+                    ? 'bg-[#FEE2E2] text-[#DC3545]' 
+                    : 'bg-[#D1FAE5] text-[#059669]'
+                }`}
+              >
+                {card.statusLabel}
+              </span>
+            )}
+          </div>
         </div>
       ))}
     </div>

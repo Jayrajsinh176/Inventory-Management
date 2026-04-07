@@ -1,5 +1,34 @@
 import { useState, useEffect } from 'react';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+} from 'chart.js';
+import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import { MdTrendingUp, MdPieChart, MdLoop, MdInfoOutline } from 'react-icons/md';
 import { getStockMovementAnalysis, getCategoryPerformanceAnalysis, getReorderPatternsAnalysis } from '../../api';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 const InventoryTrendChart = () => {
   const [activeAnalysis, setActiveAnalysis] = useState('stock-movement');
@@ -25,13 +54,9 @@ const InventoryTrendChart = () => {
           response = await getReorderPatternsAnalysis();
           break;
         case 'stock-movement':
-          response = await getStockMovementAnalysis();
-          break;
         default:
           response = await getStockMovementAnalysis();
       }
-
-      console.log(`${analysisType} Response:`, response);
 
       if (response.success) {
         setChartData(response);
@@ -52,117 +77,21 @@ const InventoryTrendChart = () => {
         return {
           title: 'Category Performance',
           description: 'Inventory value distribution across categories',
+          icon: MdPieChart,
         };
       case 'reorder-patterns':
         return {
           title: 'Reorder Patterns',
           description: 'Frequency of product reorders over time',
+          icon: MdLoop,
         };
       case 'stock-movement':
       default:
         return {
           title: 'Stock Movement Analysis',
           description: 'Units sold and fulfillment metrics over the last 6 months',
+          icon: MdTrendingUp,
         };
-    }
-  };
-
-  const renderChart = () => {
-    if (!chartData || !chartData.data) return null;
-
-    const data = chartData.data || [];
-    
-    if (data.length === 0) {
-      return (
-        <div className="flex items-center justify-center h-48">
-          <p className="text-[#6C757D]">No data available</p>
-        </div>
-      );
-    }
-
-    // Validate and sanitize data
-    const validData = data.filter(item => {
-      return item && item.month && typeof item.value === 'number' && item.value >= 0;
-    });
-
-    if (validData.length === 0) {
-      return (
-        <div className="flex items-center justify-center h-48">
-          <p className="text-[#6C757D]">Invalid data format</p>
-        </div>
-      );
-    }
-
-    const maxValue = Math.max(...validData.map(d => d.value), 1); // Ensure max is at least 1
-
-    if (activeAnalysis === 'category-performance') {
-      // Horizontal Bar Chart for Category Performance
-      const total = validData.reduce((sum, item) => sum + item.value, 0);
-      const colors = ['#007BFF', '#28A745', '#FFC107', '#6C757D', '#DC3545', '#17A2B8'];
-      
-      return (
-        <div className="space-y-4">
-          {validData.map((item, index) => {
-            const percentage = total > 0 ? (item.value / total) * 100 : 0;
-            const color = colors[index % colors.length];
-            
-            return (
-              <div key={index}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: color }}
-                    ></div>
-                    <span className="text-[14px] font-medium text-[#212529]">
-                      {item.category || 'Unknown'}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[13px] font-semibold text-[#212529]">
-                      {percentage.toFixed(1)}%
-                    </p>
-                    <p className="text-[12px] text-[#6C757D]">
-                      ₹{(item.actualValue || 0).toLocaleString('en-IN')}
-                    </p>
-                  </div>
-                </div>
-                <div className="w-full bg-[#E9ECEF] rounded-full h-6 overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-300"
-                    style={{
-                      width: `${percentage}%`,
-                      backgroundColor: color,
-                    }}
-                  ></div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      );
-    } else {
-      // Bar Chart for Stock Movement and Reorder Patterns
-      return (
-        <div className="flex items-end justify-between h-48 gap-4 px-4">
-          {validData.map((item, index) => (
-            <div key={index} className="flex-1 flex flex-col items-center">
-              {/* Bar */}
-              <div
-                className="w-full bg-[#007BFF] rounded-t-md mb-2 transition-all duration-150 hover:bg-[#0056b3] cursor-pointer"
-                style={{
-                  height: `${(item.value / maxValue) * 160}px`,
-                }}
-                title={`${item.month}: ${item.value} ${activeAnalysis === 'reorder-patterns' ? 'orders' : 'units'}`}
-              >
-              </div>
-
-              {/* Label */}
-              <p className="text-[13px] font-medium text-[#6C757D]">{item.month || 'N/A'}</p>
-            </div>
-          ))}
-        </div>
-      );
     }
   };
 
@@ -171,26 +100,210 @@ const InventoryTrendChart = () => {
 
     switch (activeAnalysis) {
       case 'stock-movement':
-        return `Total products analyzed: ${chartData.totalProductsAnalyzed} | Total inventory value: ₹${chartData.totalInventoryValue}`;
+        return `Total products analyzed: ${chartData.totalProductsAnalyzed || 0} | Total inventory value: ₹${(chartData.totalInventoryValue || 0).toLocaleString('en-IN')}`;
       case 'category-performance':
-        return `Total categories: ${chartData.totalCategoriesAnalyzed} | Total inventory value: ₹${chartData.totalInventoryValue}`;
+        return `Total categories: ${chartData.totalCategoriesAnalyzed || 0} | Total inventory value: ₹${(chartData.totalInventoryValue || 0).toLocaleString('en-IN')}`;
       case 'reorder-patterns':
-        return `Average reorder frequency: ${chartData.avgReorderFrequency}/month | Low stock items: ${chartData.currentLowStockItems}`;
+        return `Average reorder frequency: ${chartData.avgReorderFrequency || 0}/month | Low stock items: ${chartData.currentLowStockItems || 0}`;
       default:
         return '';
     }
   };
 
-  const { title, description } = getTitleAndDescription();
+  // Empty State Component
+  const EmptyState = () => (
+    <div className="flex flex-col items-center justify-center h-64 text-center">
+      <div className="w-16 h-16 bg-[#F8F9FA] rounded-full flex items-center justify-center mb-4">
+        <MdInfoOutline className="text-[32px] text-[#6C757D]" />
+      </div>
+      <h4 className="text-[16px] font-semibold text-[#212529] mb-2">No Data Available</h4>
+      <p className="text-[14px] text-[#6C757D] max-w-sm">
+        {activeAnalysis === 'category-performance' 
+          ? 'Add products to categories to see performance metrics.'
+          : 'Add products and track inventory to see analytics data.'}
+      </p>
+    </div>
+  );
+
+  // Chart configurations
+  const getChartConfig = () => {
+    if (!chartData?.data || chartData.data.length === 0) return null;
+
+    const data = chartData.data;
+    const colors = ['#007BFF', '#28A745', '#FFC107', '#DC3545', '#6C757D', '#17A2B8', '#6610F2', '#E83E8C'];
+
+    if (activeAnalysis === 'category-performance') {
+      // Doughnut Chart for Category Performance
+      return {
+        type: 'doughnut',
+        data: {
+          labels: data.map(d => d.category || 'Unknown'),
+          datasets: [{
+            data: data.map(d => d.actualValue || d.value || 0),
+            backgroundColor: colors.slice(0, data.length),
+            borderColor: '#ffffff',
+            borderWidth: 3,
+            hoverBorderWidth: 4,
+            hoverOffset: 8,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '65%',
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: {
+                usePointStyle: true,
+                pointStyle: 'circle',
+                padding: 20,
+                font: { size: 12, family: 'system-ui' },
+                color: '#212529',
+              },
+            },
+            tooltip: {
+              backgroundColor: '#212529',
+              titleColor: '#ffffff',
+              bodyColor: '#ffffff',
+              padding: 12,
+              cornerRadius: 8,
+              displayColors: true,
+              callbacks: {
+                label: (context) => {
+                  const value = context.raw || 0;
+                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                  const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                  return `₹${value.toLocaleString('en-IN')} (${percentage}%)`;
+                },
+              },
+            },
+          },
+        },
+      };
+    }
+
+    // Line/Bar Chart for Stock Movement and Reorder Patterns
+    const isStockMovement = activeAnalysis === 'stock-movement';
+    
+    return {
+      type: isStockMovement ? 'line' : 'bar',
+      data: {
+        labels: data.map(d => d.month || 'N/A'),
+        datasets: [{
+          label: isStockMovement ? 'Units Sold' : 'Reorder Count',
+          data: data.map(d => d.actualUnits || d.value || 0),
+          backgroundColor: isStockMovement 
+            ? 'rgba(0, 123, 255, 0.1)' 
+            : 'rgba(0, 123, 255, 0.8)',
+          borderColor: '#007BFF',
+          borderWidth: isStockMovement ? 3 : 0,
+          borderRadius: isStockMovement ? 0 : 6,
+          fill: isStockMovement,
+          tension: 0.4,
+          pointBackgroundColor: '#007BFF',
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            backgroundColor: '#212529',
+            titleColor: '#ffffff',
+            bodyColor: '#ffffff',
+            padding: 12,
+            cornerRadius: 8,
+            displayColors: false,
+            callbacks: {
+              title: (context) => context[0].label,
+              label: (context) => {
+                const value = context.raw || 0;
+                return isStockMovement 
+                  ? `${value.toLocaleString()} units sold`
+                  : `${value} reorders`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: {
+              display: false,
+            },
+            ticks: {
+              color: '#6C757D',
+              font: { size: 12 },
+            },
+          },
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: '#F1F3F5',
+              drawBorder: false,
+            },
+            ticks: {
+              color: '#6C757D',
+              font: { size: 12 },
+              padding: 10,
+            },
+          },
+        },
+      },
+    };
+  };
+
+  const renderChart = () => {
+    const config = getChartConfig();
+    if (!config) return <EmptyState />;
+
+    if (activeAnalysis === 'category-performance') {
+      return (
+        <div className="h-64">
+          <Doughnut data={config.data} options={config.options} />
+        </div>
+      );
+    }
+
+    if (activeAnalysis === 'stock-movement') {
+      return (
+        <div className="h-64">
+          <Line data={config.data} options={config.options} />
+        </div>
+      );
+    }
+
+    return (
+      <div className="h-64">
+        <Bar data={config.data} options={config.options} />
+      </div>
+    );
+  };
+
+  const { title, description, icon: Icon } = getTitleAndDescription();
 
   if (error) {
     return (
       <div className="bg-white rounded-lg border border-[#DEE2E6] p-6 shadow-md mb-8">
         <div className="text-center py-8">
-          <p className="text-red-500 font-semibold">Error: {error}</p>
+          <div className="w-16 h-16 bg-[#FEE2E2] rounded-full flex items-center justify-center mx-auto mb-4">
+            <MdInfoOutline className="text-[32px] text-[#DC3545]" />
+          </div>
+          <p className="text-[#DC3545] font-semibold mb-4">Error: {error}</p>
           <button
             onClick={() => fetchData(activeAnalysis)}
-            className="mt-4 px-4 py-2 bg-[#007BFF] text-white rounded-lg hover:bg-[#0056b3] transition-colors"
+            className="px-4 py-2 bg-[#007BFF] text-white rounded-lg hover:bg-[#0056b3] transition-colors"
           >
             Retry
           </button>
@@ -202,60 +315,73 @@ const InventoryTrendChart = () => {
   return (
     <div className="bg-white rounded-lg border border-[#DEE2E6] p-6 shadow-md mb-8">
       {/* Header */}
-      <div className="mb-6">
-        <h3 className="text-[18px] font-semibold text-[#212529] mb-1">{title}</h3>
-        <p className="text-[14px] text-[#6C757D]">{description}</p>
+      <div className="flex items-start justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-[#E7F3FF] rounded-lg flex items-center justify-center">
+            <Icon className="text-[20px] text-[#007BFF]" />
+          </div>
+          <div>
+            <h3 className="text-[18px] font-semibold text-[#212529]">{title}</h3>
+            <p className="text-[14px] text-[#6C757D]">{description}</p>
+          </div>
+        </div>
       </div>
 
       {/* Analysis Toggle Buttons */}
-      <div className="flex gap-3 mb-6 border-b border-[#DEE2E6] pb-4">
+      <div className="flex gap-2 mb-6 border-b border-[#DEE2E6] pb-4">
         <button
           onClick={() => setActiveAnalysis('stock-movement')}
-          className={`px-4 py-2 text-[14px] font-semibold rounded-lg transition-all ${
+          className={`px-4 py-2 text-[13px] font-semibold rounded-lg transition-all flex items-center gap-2 ${
             activeAnalysis === 'stock-movement'
-              ? 'bg-[#007BFF] text-white border border-[#007BFF]'
+              ? 'bg-[#007BFF] text-white shadow-sm'
               : 'bg-[#F8F9FA] text-[#212529] border border-[#DEE2E6] hover:bg-[#E9ECEF]'
           }`}
         >
-          📊 Stock Movement
+          <MdTrendingUp className="text-[16px]" />
+          Stock Movement
         </button>
         <button
           onClick={() => setActiveAnalysis('category-performance')}
-          className={`px-4 py-2 text-[14px] font-semibold rounded-lg transition-all ${
+          className={`px-4 py-2 text-[13px] font-semibold rounded-lg transition-all flex items-center gap-2 ${
             activeAnalysis === 'category-performance'
-              ? 'bg-[#007BFF] text-white border border-[#007BFF]'
+              ? 'bg-[#007BFF] text-white shadow-sm'
               : 'bg-[#F8F9FA] text-[#212529] border border-[#DEE2E6] hover:bg-[#E9ECEF]'
           }`}
         >
-          💰 Category Performance
+          <MdPieChart className="text-[16px]" />
+          Category Performance
         </button>
         <button
           onClick={() => setActiveAnalysis('reorder-patterns')}
-          className={`px-4 py-2 text-[14px] font-semibold rounded-lg transition-all ${
+          className={`px-4 py-2 text-[13px] font-semibold rounded-lg transition-all flex items-center gap-2 ${
             activeAnalysis === 'reorder-patterns'
-              ? 'bg-[#007BFF] text-white border border-[#007BFF]'
+              ? 'bg-[#007BFF] text-white shadow-sm'
               : 'bg-[#F8F9FA] text-[#212529] border border-[#DEE2E6] hover:bg-[#E9ECEF]'
           }`}
         >
-          🔄 Reorder Patterns
+          <MdLoop className="text-[16px]" />
+          Reorder Patterns
         </button>
       </div>
 
       {/* Loading State */}
       {loading ? (
-        <div className="flex justify-center items-center h-48">
-          <div className="animate-spin">
+        <div className="flex flex-col items-center justify-center h-64">
+          <div className="animate-spin mb-4">
             <div className="w-12 h-12 border-4 border-[#DEE2E6] border-t-[#007BFF] rounded-full"></div>
           </div>
+          <p className="text-[14px] text-[#6C757D]">Loading chart data...</p>
         </div>
       ) : (
         <>
           {/* Chart Container */}
-          {renderChart()}
+          <div className="px-2">
+            {renderChart()}
+          </div>
 
           {/* Legend/Note */}
-          <div className="mt-6 pt-6 border-t border-[#F1F3F5] text-center">
-            <p className="text-[12px] text-[#6C757D]">{getFooterNote()}</p>
+          <div className="mt-6 pt-4 border-t border-[#F1F3F5]">
+            <p className="text-[12px] text-[#6C757D] text-center">{getFooterNote()}</p>
           </div>
         </>
       )}

@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { MdAdd } from 'react-icons/md';
 import Sidebar from '../components/dashboard/Sidebar';
 import Header from '../components/dashboard/Header';
@@ -7,6 +8,13 @@ import InventoryHealthFeed from '../components/dashboard/InventoryHealthFeed';
 import LowStockAlerts from '../components/dashboard/LowStockAlerts';
 
 const DashboardPage = () => {
+  const navigate = useNavigate();
+
+  const handleExportReport = () => {
+    // For now, show an alert. In production, this would generate a PDF/CSV
+    alert('Export functionality coming soon! This will generate a PDF/CSV report of your inventory data.');
+  };
+
   return (
     <div className="flex bg-[#F8F9FA] min-h-screen">
       {/* Sidebar */}
@@ -30,10 +38,16 @@ const DashboardPage = () => {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <button className="px-4 py-2 border border-[#DEE2E6] rounded-lg text-[14px] font-semibold text-[#212529] hover:bg-[#F8F9FA] transition-colors">
+              <button 
+                onClick={handleExportReport}
+                className="px-4 py-2 border border-[#DEE2E6] rounded-lg text-[14px] font-semibold text-[#212529] hover:bg-[#F8F9FA] transition-colors"
+              >
                 Export Report
               </button>
-              <button className="px-4 py-2 bg-[#000000] text-white rounded-lg text-[14px] font-semibold hover:bg-[#1A1A1A] transition-colors flex items-center gap-2">
+              <button 
+                onClick={() => navigate('/products/add')}
+                className="px-4 py-2 bg-[#000000] text-white rounded-lg text-[14px] font-semibold hover:bg-[#1A1A1A] transition-colors flex items-center gap-2"
+              >
                 <MdAdd className="text-[18px]" />
                 Add Item
               </button>

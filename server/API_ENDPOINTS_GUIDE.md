@@ -1508,39 +1508,7 @@ GET /dashboard/low-stock-alerts
 }
 ```
 
----
 
-### ❌ NEW: Get Inventory Health Feed
-```
-GET /dashboard/inventory-health
-```
-**Priority**: PHASE 1 (CRITICAL)
-
-**Query Parameters:**
-- `limit` (number): Max events to return (default: 10)
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "events": [
-    {
-      "type": "arrival",
-      "title": "Bulk Arrival",
-      "description": "Section A12",
-      "detail": "+450 Units",
-      "timestamp": "2024-03-20T14:22:00Z"
-    },
-    {
-      "type": "pending",
-      "title": "Reorder Pending",
-      "description": "SKU-902",
-      "detail": "Waiting Approval",
-      "timestamp": "2024-03-20T13:15:00Z"
-    }
-  ]
-}
-```
 
 ---
 

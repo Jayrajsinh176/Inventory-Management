@@ -1,6 +1,7 @@
 import { MdAdd, MdEdit, MdDelete, MdCheck, MdClose } from 'react-icons/md';
 import { useState, useEffect } from 'react';
-import { getCategories, createCategory, deleteCategory } from '../../api';
+import { getCategories, createCategory, deleteCategory, updateCategory } from '../../api';
+import ConfirmationModal from '../common/ConfirmationModal.jsx';
 
 const CategoriesHeader = ({ onAddClick, loading }) => {
   return (
@@ -31,7 +32,7 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
   const [addingCategory, setAddingCategory] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editingName, setEditingName] = useState('');
-
+  const [deleteConfirmationModal, setDeleteConfirmationModal] = useState({ isOpen: false, categoryId: null });
   // Fetch categories on mount
   useEffect(() => {
     fetchCategories();
@@ -77,14 +78,12 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
   };
 
   const handleDeleteCategory = async (categoryId) => {
-    if (window.confirm('Are you sure you want to delete this category?')) {
       try {
         await deleteCategory(categoryId);
         await fetchCategories(); // Refresh the list
       } catch (err) {
         alert(err.message || 'Failed to delete category');
       }
-    }
   };
 
   const handleEditClick = (categoryId, categoryName) => {
@@ -98,8 +97,12 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
       return;
     }
 
-    // Show message that feature is coming soon
-    alert('Edit functionality will be available soon. You can delete and recreate the category for now.');
+    const response = await updateCategory(editingId, { name: editingName });
+    if (response.success) {
+      await fetchCategories(); // Refresh the list
+    } else {      
+      alert(response.message || 'Failed to update category');
+    }
     setEditingId(null);
     setEditingName('');
   };
@@ -274,7 +277,9 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
                               <MdEdit className="text-[20px]" />
                             </button>
                             <button 
-                              onClick={() => handleDeleteCategory(category.id)}
+                              onClick={() => {
+                                onClickHandleDelete(category.id);
+                              }}
                               className="p-2 text-[#DC3545] hover:text-[#c82333] hover:bg-[#FCE4E6] rounded transition-colors"
                               title="Delete"
                             >
@@ -291,6 +296,16 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
           </table>
         </div>
       </div>
+      <ConfirmationModal
+        isOpen={setDeleteConfirmationModal}
+        title="Delete Category"
+        message="Are you sure you want to delete this category? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={onConfirmDelete}
+        onCancel={onCancelDelete}
+        isDangerous={true}
+      />
     </div>
   );
 };

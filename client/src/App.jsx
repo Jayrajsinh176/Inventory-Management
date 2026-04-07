@@ -10,6 +10,9 @@ import EditProductPage from './pages/EditProductPage';
 import SubscriptionPage from './pages/SubscriptionPage';
 import UsersPage from './pages/UsersPage';
 import EditUserPage from './pages/EditUserPage';
+import ProfilePage from './pages/ProfilePage';
+import NotificationsPage from './pages/NotificationsPage';
+import ProtectedRoute from './components/common/ProtectedRoute';
 
 function App() {
   return (
@@ -20,15 +23,37 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<SignupPage />} />
 
-        {/* Dashboard routes */}
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/products" element={<ProductsPage />} />
-        <Route path="/products/add" element={<AddProductPage />} />
-        <Route path="/products/edit/:productId" element={<EditProductPage />} />
-        <Route path="/categories" element={<CategoriesPage />} />
-        <Route path="/subscription" element={<SubscriptionPage />} />
-        <Route path="/users" element={<UsersPage />} />
-        <Route path="/users/edit/:userId" element={<EditUserPage />} />
+        {/* Protected Dashboard routes */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute><DashboardPage /></ProtectedRoute>
+        } />
+        <Route path="/products" element={
+          <ProtectedRoute><ProductsPage /></ProtectedRoute>
+        } />
+        <Route path="/products/add" element={
+          <ProtectedRoute><AddProductPage /></ProtectedRoute>
+        } />
+        <Route path="/products/edit/:productId" element={
+          <ProtectedRoute><EditProductPage /></ProtectedRoute>
+        } />
+        <Route path="/categories" element={
+          <ProtectedRoute><CategoriesPage /></ProtectedRoute>
+        } />
+        <Route path="/subscription" element={
+          <ProtectedRoute><SubscriptionPage /></ProtectedRoute>
+        } />
+        <Route path="/users" element={
+          <ProtectedRoute><UsersPage /></ProtectedRoute>
+        } />
+        <Route path="/users/edit/:userId" element={
+          <ProtectedRoute><EditUserPage /></ProtectedRoute>
+        } />
+        <Route path="/profile" element={
+          <ProtectedRoute><ProfilePage /></ProtectedRoute>
+        } />
+        <Route path="/notifications" element={
+          <ProtectedRoute><NotificationsPage /></ProtectedRoute>
+        } />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
