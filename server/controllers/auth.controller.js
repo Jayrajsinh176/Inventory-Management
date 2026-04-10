@@ -331,7 +331,7 @@ export const loginUser = async (req, res) => {
 
     email = normalizeEmail(email);
     phone = phone?.trim();
-
+    password = password?.trim();
     if ((!email && !phone) || !password) {
       return res.status(400).json({
         success: false,

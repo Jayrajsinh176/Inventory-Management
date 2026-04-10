@@ -38,6 +38,7 @@ const SummaryCards = ({ refreshKey = 0 }) => {
     inventoryValue: '₹0.00',
     lowStockAlerts: 0,
     totalProducts: 0,
+    totalRevenue: '₹0.00',
   });
 
   useEffect(() => {
@@ -47,11 +48,13 @@ const SummaryCards = ({ refreshKey = 0 }) => {
         if (response.products) {
           const totalValue = response.products.reduce((sum, product) => sum + product.price * product.stock, 0);
           const lowStockCount = response.products.filter((product) => product.stock < 10).length;
+          const totalRevenue = response.products.reduce((sum, product) => sum + product.price * product.stock, 0);
 
           setStats({
             inventoryValue: `₹${totalValue.toFixed(2)}`,
             lowStockAlerts: lowStockCount,
             totalProducts: response.count || 0,
+            totalRevenue: `₹${totalRevenue.toFixed(2)}`,
           });
         }
       } catch (error) {
@@ -64,12 +67,13 @@ const SummaryCards = ({ refreshKey = 0 }) => {
 
   const cards = [
     { label: 'Inventory Value', value: stats.inventoryValue, icon: 'payments' },
+    { label: 'Total Revenue', value: stats.totalRevenue, icon: 'trending_up' },
     { label: 'Low Stock Alerts', value: stats.lowStockAlerts.toString(), icon: 'warning' },
     { label: 'Total Products', value: stats.totalProducts.toString(), icon: 'movement' },
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-6 mb-8">
+    <div className="grid grid-cols-4 gap-6 mb-8">
       {cards.map((card, index) => (
         <div
           key={index}
@@ -98,6 +102,8 @@ const ProductsTable = ({ onProductsChanged }) => {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [deleteProductId, setDeleteProductId] = useState(null);
   const [categories, setCategories] = useState([]);
+  const [editingStockId, setEditingStockId] = useState(null);
+  const [editingStockValue, setEditingStockValue] = useState('');
   const limit = 10;
   const totalPages = Math.ceil(totalCount / limit);
   const visiblePageCount = Math.min(3, totalPages);
@@ -195,6 +201,38 @@ const ProductsTable = ({ onProductsChanged }) => {
   const handleDelete = (productId) => {
     setDeleteProductId(productId);
     setIsDeleteConfirmOpen(true);
+  };
+
+  const handleStockEdit = (product) => {
+    setEditingStockId(product.id);
+    setEditingStockValue(product.stock.toString());
+  };
+
+  const handleStockSave = (productId) => {
+    const newStock = parseInt(editingStockValue, 10);
+    
+    if (isNaN(newStock) || newStock < 0) {
+      alert('Please enter a valid stock value (0 or more)');
+      return;
+    }
+
+    // Update local state
+    setProducts((currentProducts) =>
+      currentProducts.map((product) =>
+        product.id === productId ? { ...product, stock: newStock } : product
+      )
+    );
+
+    setEditingStockId(null);
+    setEditingStockValue('');
+    
+    // When backend is ready, call updateProductStock(productId, newStock)
+    console.log(`Stock updated for product ${productId} to ${newStock}`);
+  };
+
+  const handleStockCancel = () => {
+    setEditingStockId(null);
+    setEditingStockValue('');
   };
 
   const onConfirmDelete = async () => {
@@ -370,11 +408,42 @@ const ProductsTable = ({ onProductsChanged }) => {
                       </td>
                       <td className="px-6 py-4">
                         <p className="text-[14px] text-[#6C757D]">
-                          {typeof product.category === 'object' ? product.category.name : product.category}
+                          {product.category && typeof product.category === 'object' ? product.category.name : product.category}
                         </p>
                       </td>
                       <td className="px-6 py-4">
-                        <p className="text-[14px] font-semibold text-[#212529]">{product.stock}</p>
+                        {editingStockId === product.id ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="0"
+                              value={editingStockValue}
+                              onChange={(e) => setEditingStockValue(e.target.value)}
+                              className="w-16 px-2 py-1 border border-[#DEE2E6] rounded text-[14px] focus:outline-none focus:border-[#000000]"
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => handleStockSave(product.id)}
+                              className="px-2 py-1 text-[12px] bg-[#28A745] text-white rounded hover:bg-[#218838] transition-colors"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={handleStockCancel}
+                              className="px-2 py-1 text-[12px] bg-[#6C757D] text-white rounded hover:bg-[#5a6268] transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <p
+                            className="text-[14px] font-semibold text-[#212529] cursor-pointer hover:text-[#0056b3] transition-colors"
+                            onClick={() => handleStockEdit(product)}
+                            title="Click to edit stock"
+                          >
+                            {product.stock}
+                          </p>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <p className="text-[14px] font-semibold text-[#212529]">

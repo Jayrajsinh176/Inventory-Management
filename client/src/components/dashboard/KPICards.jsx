@@ -1,6 +1,6 @@
-import { MdInventory2, MdCategory, MdWarning, MdPayments, MdTrendingUp, MdTrendingDown } from 'react-icons/md';
+import { MdInventory2, MdCategory, MdWarning, MdPayments, MdTrendingUp, MdTrendingDown, MdAttachMoney } from 'react-icons/md';
 import { useState, useEffect } from 'react';
-import { getProductStats, getCategories } from '../../api';
+import { getProductStats, getCategories, getProducts } from '../../api';
 
 const KPICards = () => {
   const [stats, setStats] = useState({
@@ -8,6 +8,7 @@ const KPICards = () => {
     totalCategories: '0',
     lowStockItems: '0',
     inventoryValue: '₹0.00',
+    totalRevenue: '₹0.00',
   });
   const [loading, setLoading] = useState(true);
 
@@ -15,20 +16,26 @@ const KPICards = () => {
     const fetchDashboardStats = async () => {
       try {
         setLoading(true);
-        const [statsResponse, categoriesResponse] = await Promise.all([
+        const [statsResponse, categoriesResponse, productsResponse] = await Promise.all([
           getProductStats(),
           getCategories(),
+          getProducts({ limit: 1000 }),
         ]);
 
         // Extract stats from response
         const productStats = statsResponse.stats || {};
         const categories = categoriesResponse.data || [];
+        const products = productsResponse.products || [];
+
+        // Calculate total revenue
+        const totalRevenue = products.reduce((sum, product) => sum + product.price * product.stock, 0);
 
         setStats({
           totalProducts: productStats.totalProducts?.toString() || '0',
           totalCategories: categories.length.toString(),
           lowStockItems: productStats.lowStocksAlerts?.toString() || '0',
           inventoryValue: `₹${parseFloat(productStats.inventoryValue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          totalRevenue: `₹${totalRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
         });
       } catch (error) {
         console.error('Failed to fetch dashboard stats:', error);
@@ -37,6 +44,7 @@ const KPICards = () => {
           totalCategories: '0',
           lowStockItems: '0',
           inventoryValue: '₹0.00',
+          totalRevenue: '₹0.00',
         });
       } finally {
         setLoading(false);
@@ -64,6 +72,14 @@ const KPICards = () => {
       color: '#28A745',
     },
     {
+      label: 'Total Revenue',
+      value: stats.totalRevenue,
+      description: 'Expected revenue from stock',
+      trend: 'up',
+      icon: MdAttachMoney,
+      color: '#FFC107',
+    },
+    {
       label: 'Low Stock Items',
       value: stats.lowStockItems,
       description: parseInt(stats.lowStockItems) > 0 ? 'Items need attention' : 'All items stocked',
@@ -85,8 +101,8 @@ const KPICards = () => {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-4 gap-6 mb-8">
-        {[...Array(4)].map((_, index) => (
+      <div className="grid grid-cols-5 gap-6 mb-8">
+        {[...Array(5)].map((_, index) => (
           <div
             key={index}
             className="bg-white rounded-lg border border-[#DEE2E6] p-6 shadow-md animate-pulse"
@@ -104,7 +120,7 @@ const KPICards = () => {
   }
 
   return (
-    <div className="grid grid-cols-4 gap-6 mb-8">
+    <div className="grid grid-cols-5 gap-6 mb-8">
       {cards.map((card, index) => (
         <div
           key={index}
