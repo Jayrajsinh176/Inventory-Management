@@ -21,6 +21,18 @@ const invoiceSchema = new mongoose.Schema({
         ref : 'Order',
         required : true,
     },
+    subtotal : {
+        type : Number,
+        required : true,
+    },
+    tax : {
+        type : Number,
+        default : 0,
+    },
+    discount : {
+        type : Number,
+        default : 0,
+    },
     amount : {
         type : Number,
         required : true,
@@ -33,7 +45,21 @@ const invoiceSchema = new mongoose.Schema({
     issueDate : {
         type : Date,
         default : Date.now,
-    },  
+    },
+    dueDate : {
+        type : Date,
+    },
+    paidDate : {
+        type : Date,
+    },
+    paymentMethod : {
+        type : String,
+        enum : ['online', 'cash'],
+    },
+    transactionId : {
+        type : String,
+    },
+    notes : String,
 })
 
 const Invoice = mongoose.model('Invoice',invoiceSchema);

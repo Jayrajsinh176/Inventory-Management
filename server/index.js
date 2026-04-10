@@ -17,6 +17,7 @@ import alertRoutes from './routes/alert.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import companyRoutes from './routes/company.routes.js';
 import orderRoutes from './routes/order.routes.js';
+import invoiceRoutes from './routes/invoice.routes.js';
 
 // validate environment before starting server 
 // check .env file there are variable assign or not 
@@ -76,6 +77,7 @@ app.use('/api/alert', alertRoutes);
 app.use('/api/dashboard',dashboardRoutes);
 app.use('/api/company',companyRoutes);
 app.use('/api/orders',orderRoutes);
+app.use('/api/invoices',invoiceRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
