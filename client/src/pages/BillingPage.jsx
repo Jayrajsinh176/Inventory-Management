@@ -479,7 +479,7 @@ const BillingPage = () => {
             </div>
 
             {/* Right Column - Order Summary */}
-            {(currentStep === 'payment' || currentStep === 'confirm') && (
+            {currentStep !== 'confirm' && (
               <div>
                 <OrderSummary
                   items={cartItems}

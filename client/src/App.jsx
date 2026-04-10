@@ -12,7 +12,10 @@ import UsersPage from './pages/UsersPage';
 import EditUserPage from './pages/EditUserPage';
 import ProfilePage from './pages/ProfilePage';
 import NotificationsPage from './pages/NotificationsPage';
-import BillingPage from './pages/BillingPage';
+import BillingPage from './pages/billing/BillingPage';
+import PaymentPage from './pages/billing/PaymentPage';
+import ReviewPage from './pages/billing/ReviewPage';
+import SuccessPage from './pages/billing/SuccessPage';
 import ProtectedRoute from './components/common/ProtectedRoute';
 
 function App() {
@@ -43,9 +46,13 @@ function App() {
         <Route path="/subscription" element={
           <ProtectedRoute><SubscriptionPage /></ProtectedRoute>
         } />
-        <Route path="/billing" element={
-          <ProtectedRoute><BillingPage /></ProtectedRoute>
-        } />
+        
+        {/* Nested Billing/POS routes */}
+        <Route path="/billing" element={<ProtectedRoute><BillingPage /></ProtectedRoute>} />
+        <Route path="/billing/payment" element={<ProtectedRoute><PaymentPage /></ProtectedRoute>} />
+        <Route path="/billing/review" element={<ProtectedRoute><ReviewPage /></ProtectedRoute>} />
+        <Route path="/billing/success" element={<ProtectedRoute><SuccessPage /></ProtectedRoute>} />
+        
         <Route path="/users" element={
           <ProtectedRoute><UsersPage /></ProtectedRoute>
         } />
