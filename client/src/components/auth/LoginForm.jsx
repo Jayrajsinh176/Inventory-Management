@@ -14,8 +14,8 @@ const LoginForm = () => {
   const handleIdentifierChange = (e) => {
     const value = e.target.value;
     
-    // If contains @, treat as email - allow any input
-    if (value.includes('@')) {
+    // If contains @ or has letters/dots (email pattern), treat as email - allow any input
+    if (value.includes('@') || /[a-zA-Z.]/.test(value)) {
       setIdentifier(value);
     } else {
       // Treat as phone - remove non-digits and limit to 10
@@ -113,7 +113,14 @@ const LoginForm = () => {
               id="login-password"
               type={showPassword ? 'text' : 'password'}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={
+                (e) => {
+                  const value = e.target.value;
+                  if (value.includes(" ")) {
+                    return; // ignore input
+                  }
+                  setPassword(value);}
+                }
               placeholder="••••••••"
               required
               disabled={loading}

@@ -12,6 +12,7 @@ import UsersPage from './pages/UsersPage';
 import EditUserPage from './pages/EditUserPage';
 import ProfilePage from './pages/ProfilePage';
 import NotificationsPage from './pages/NotificationsPage';
+import BillingPage from './pages/BillingPage';
 import ProtectedRoute from './components/common/ProtectedRoute';
 
 function App() {
@@ -41,6 +42,9 @@ function App() {
         } />
         <Route path="/subscription" element={
           <ProtectedRoute><SubscriptionPage /></ProtectedRoute>
+        } />
+        <Route path="/billing" element={
+          <ProtectedRoute><BillingPage /></ProtectedRoute>
         } />
         <Route path="/users" element={
           <ProtectedRoute><UsersPage /></ProtectedRoute>

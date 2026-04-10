@@ -44,13 +44,6 @@ const DashboardPage = () => {
               >
                 Export Report
               </button>
-              <button 
-                onClick={() => navigate('/products/add')}
-                className="px-4 py-2 bg-[#000000] text-white rounded-lg text-[14px] font-semibold hover:bg-[#1A1A1A] transition-colors flex items-center gap-2"
-              >
-                <MdAdd className="text-[18px]" />
-                Add Item
-              </button>
             </div>
           </div>
 
@@ -61,7 +54,7 @@ const DashboardPage = () => {
           <InventoryTrendChart />
 
           {/* Inventory Health Feed */}
-          <InventoryHealthFeed />
+          {/* <InventoryHealthFeed /> */}
 
           {/* Low Stock Alerts Table */}
           <LowStockAlerts />

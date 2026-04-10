@@ -10,6 +10,7 @@ import {
   MdLogout,
   MdNotifications,
   MdPerson,
+  MdFactCheck,
 } from 'react-icons/md';
 
 const Sidebar = () => {
@@ -70,6 +71,13 @@ const Sidebar = () => {
           active={isActive('/subscription')}
           onClick={() => navigate('/subscription')}
         />
+        <NavItem
+          icon="fact_check"
+          label="Billing"
+          path="/billing"
+          active={isActive('/billing')}
+          onClick={() => navigate('/billing')}
+        />
         
         {/* Divider */}
         <div className="border-t border-[#DEE2E6] my-3"></div>
@@ -125,6 +133,7 @@ const NavItem = ({ icon, label, active, onClick, path }) => {
     settings: MdSettings,
     notifications: MdNotifications,
     person: MdPerson,
+    fact_check: MdFactCheck,
   };
 
   const IconComponent = iconMap[icon];
