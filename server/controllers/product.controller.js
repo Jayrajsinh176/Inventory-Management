@@ -162,15 +162,15 @@ export const getProductById = async (req, res) => {
  */
 export const createProduct = async (req, res) => {
   try {
-    let { name, sku, category, price, stock } = req.body;
+    let { name, sku, category, price, stock ,vendorName } = req.body;
 
     name = name?.trim();
     sku = sku?.trim().toUpperCase();
 
-    if (!name || !sku || !category || price === undefined) {
+    if (!name || !sku || !category || price === undefined || !vendorName) {
       return res.status(400).json({
         success : false,
-        message: "Name, SKU, category, and price are required",
+        message: "Name, SKU, category, price, and vendor name are required",
       });
     }
 
@@ -226,6 +226,7 @@ export const createProduct = async (req, res) => {
       category,
       price,
       stock: stock ?? 0,
+      vendor: vendorName,
     });
 
     await product.populate("category", "name");
@@ -768,4 +769,31 @@ export const getReorderPatternsAnalysis = async (req, res) => {
   }
 };
 
+/**
+ * @description get products by vendor
+ * @route GET /api/products/vendor/:vendorName
+ * @access Protected
+ */ 
+export const getProductsByVendor = async (req, res) => {
+  try {
+    const companyId = new mongoose.Types.ObjectId(req.user.company);
+    const vendorName = req.params.vendorName;
 
+    const products = await Product.find({
+      company: companyId,
+      vendor: { $regex: vendorName, $options: "i" }
+    }).lean();
+
+    return res.status(200).json({
+      success: true,
+      message: "Products by vendor fetched successfully",
+      data: products
+    });
+  } catch (error) {
+    console.error('Get Products by Vendor Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};

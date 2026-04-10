@@ -40,7 +40,18 @@ const productSchema = new mongoose.Schema(
       default: 0,
       min: [0, "Stock cannot be negative"],
     },
-
+    
+    action : {
+      type : String,
+      enum : ['add','sold','defective','return'],
+      default : 'add',
+      required : true,
+    },
+    vendor:{
+      type : String,
+      trim : true,
+      maxlength : 100,
+    },
     lowStockThreshold: {
       type: Number,
       required: true,

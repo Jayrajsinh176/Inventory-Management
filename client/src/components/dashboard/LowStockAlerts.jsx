@@ -22,8 +22,8 @@ const LowStockAlerts = () => {
           sku: product.sku,
           category: product.category?.name || 'N/A',
           stock: product.stock,
-          threshold: 5, // Default threshold
-          status: product.stock === 0 ? 'OUT OF STOCK' : product.stock <= 5 ? 'LOW STOCK' : 'IN STOCK',
+          threshold: product.lowStockThreshold || 5, // Default threshold
+          status: product.stock === 0 ? 'OUT OF STOCK' : product.stock <= product.lowStockThreshold ? 'LOW STOCK' : 'IN STOCK',
           image: '📦',
         }));
 

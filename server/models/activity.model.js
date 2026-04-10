@@ -48,10 +48,9 @@ const activitySchema = new mongoose.Schema(
   }
 );
 
-// Compound index for efficient user activity queries sorted by date
 activitySchema.index({ user: 1, createdAt: -1 });
 
-// Index for company-wide activity queries
+
 activitySchema.index({ company: 1, createdAt: -1 });
 
 const Activity = mongoose.model("Activity", activitySchema);
