@@ -82,7 +82,7 @@ export const createOrder = async (req, res) => {
             });
             await product.save();
         }
-        
+
         let invoice = null;
         if (paymentStatus === 'paid' || paymentMethod === 'online') {
             const invoiceCount = await Invoice.countDocuments({ company: req.user.company });
@@ -232,23 +232,16 @@ export const updateOrder = async (req, res) => {
     try {
         const { id } = req.params;
         const { status, paymentStatus, transactionId, notes } = req.body;
-
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ message: "Invalid order ID" });
         }
-
         const order = await Order.findById(id);
-
         if (!order) {
             return res.status(404).json({ message: "Order not found" });
         }
-
-        // Authorization check - ensure user belongs to the company
         if (order.company.toString() !== req.user.company.toString()) {
             return res.status(403).json({ message: "Not authorized to update this order" });
         }
-
-        // Update status if provided
         if (status) {
             const validStatuses = ['pending', 'processing', 'completed', 'cancelled', 'failed'];
             if (!validStatuses.includes(status)) {
@@ -262,8 +255,6 @@ export const updateOrder = async (req, res) => {
                 reason: req.body.reason || 'Status updated'
             });
         }
-
-        // Update payment status if provided
         if (paymentStatus) {
             const validPaymentStatuses = ['pending', 'paid', 'failed', 'refunded'];
             if (!validPaymentStatuses.includes(paymentStatus)) {
@@ -272,12 +263,8 @@ export const updateOrder = async (req, res) => {
 
             const previousPaymentStatus = order.paymentStatus;
             order.paymentStatus = paymentStatus;
-
-            // Mark as paid
             if (paymentStatus === 'paid' && previousPaymentStatus !== 'paid') {
                 order.paidAt = new Date();
-
-                // Update invoice status if exists
                 if (order.invoiceId) {
                     await Invoice.findByIdAndUpdate(order.invoiceId, {
                         status: 'paid',
@@ -286,13 +273,10 @@ export const updateOrder = async (req, res) => {
                 }
             }
         }
-
-        // Update transaction ID if provided
         if (transactionId) {
             order.transactionId = transactionId;
         }
 
-        // Update notes if provided
         if (notes) {
             order.notes = notes;
         }
@@ -338,20 +322,14 @@ export const deleteOrder = async (req, res) => {
         if (!order) {
             return res.status(404).json({ message: "Order not found" });
         }
-
-        // Authorization check
         if (order.company.toString() !== req.user.company.toString()) {
             return res.status(403).json({ message: "Not authorized to delete this order" });
         }
-
-        // Only allow deletion if order is pending or processing
         if (!['pending', 'processing'].includes(order.status)) {
             return res.status(400).json({ 
                 message: "Cannot delete order. Only pending or processing orders can be deleted." 
             });
         }
-
-        // Restore stock before deleting
         for (const item of order.items) {
             const product = await Product.findById(item.product);
             if (product) {
@@ -359,8 +337,6 @@ export const deleteOrder = async (req, res) => {
                 await product.save();
             }
         }
-
-        // Mark as cancelled instead of deleting
         order.status = 'cancelled';
         order.statusHistory.push({
             status: 'cancelled',

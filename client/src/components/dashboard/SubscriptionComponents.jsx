@@ -65,6 +65,7 @@ const UsageProgressBar = () => {
         
         // Fetch plans to get limits
         const plansRes = await getPlans();
+        console.log('Fetched plans:', plansRes.data);
         const plans = plansRes.data || [];
         const currentPlan = plans.find(p => p.id === planKey);
 
