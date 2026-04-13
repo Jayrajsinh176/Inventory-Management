@@ -1,31 +1,45 @@
 import { MdCheckCircle, MdWarning, MdDone, MdReceiptLong } from 'react-icons/md';
 import { useState, useEffect } from 'react';
-import { getPlans, getProducts, getUsers, AuthService } from '../../api';
+import { getCurrentSubscription, getPlans, getProducts, getUsers, AuthService } from '../../api';
 
 const CurrentPlanBanner = () => {
   const [currentPlan, setCurrentPlan] = useState(null);
+  const [data, setData] = useState(null);
 
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      try {
+        const response = await getCurrentSubscription();
+        setData(response);
+      } catch (error) {
+        console.error('Failed to fetch subscription details:', error);
+      }
+    };
+    fetchSubscription();
+  }, []);
+  console.log('Current Subscription Data:', data);
   useEffect(() => {
     const company = AuthService.getCompany();
     if (company) {
       setCurrentPlan(company.plan || 'basic');
     }
   }, []);
-
+  const formatDate = (date) =>
+    date ? new Date(date).toLocaleDateString("en-IN") : "-";
   return (
     <div className="bg-white border border-[#DEE2E6] rounded-lg p-6 shadow-md mb-8">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-4">
-            <h3 className="text-[18px] font-semibold text-[#212529]">{currentPlan ? currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1) : 'Basic'} Plan</h3>
+            <h3 className="text-[18px] font-semibold text-[#212529]">{data && `${data.subscription} Plan`}</h3>
             <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#D4EDDA] border border-[#C3E6CB] rounded-full text-[11px] font-semibold text-[#155724]">
               <MdCheckCircle className="text-[14px]" />
               Active
             </span>
           </div>
           <div className="space-y-1 text-[14px] text-[#6C757D]">
-            <p>Next billing date: <span className="font-semibold text-[#212529]">-</span></p>
-            <p>Renewal date: <span className="font-semibold text-[#212529]">-</span></p>
+            <p>Starting Date: <span className="font-semibold text-[#212529]">{data && `${formatDate(data?.subscription_start_date)}`}</span></p>
+            <p>Expiry Date: <span className="font-semibold text-[#212529]">{data && `${formatDate(data?.subscription_end_date)}`}</span></p>
           </div>
         </div>
 

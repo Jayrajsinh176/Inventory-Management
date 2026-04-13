@@ -10,7 +10,6 @@ import {
     getInvoiceDetails
 } from '../controllers/company.controller.js';
 
-
 const router = express.Router();
 
 router.get('/',protect , companyProfile);

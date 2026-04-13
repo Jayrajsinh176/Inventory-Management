@@ -629,3 +629,45 @@ export async function getPlans() {
 
   return data;
 }
+
+/** 
+ * Get current subscription details
+ * @returns {Promise<Object>} Current subscription details
+ */
+export async function getCurrentSubscription() {
+  const response = await fetch(`${API_BASE_URL}/api/company/subscription`,{
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeader(),
+    },
+  });
+  
+  const data = await response.json();
+  console.log('Current Subscription : ', data);
+  if(!response.ok){
+    throw new Error(data.message || 'Failed to fetch current subscription details');
+  }
+  return data;
+}
+
+/** 
+ * update subscription plan
+ * @param {string} planId - Plan ID to subscribe
+ * @returns {Promise<Object>} Subscription update confirmation
+ */
+export const updateSubscriptionPlan = async (planId) => {
+  const response = await fetch(`${API_BASE_URL}/api/company/subscription`,{
+    method: 'PATCH',
+    headers: {
+      'Content-Type' : 'application/json',
+      ...AuthService.getAuthHeader(),
+    },
+    body: JSON.stringify({ planId }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || 'Failed to update subscription plan');
+  }
+  return data;
+}

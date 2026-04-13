@@ -54,7 +54,7 @@ export const updateCompanyProfile = async (req, res) => {
 export const getCompanySubscription = async (req, res) => {
     try {
         const companyId = req.user.company;
-        const company = await Company.findById(companyId).select('-__v');
+        const company = await Company.findById(companyId).select('plan subscription_start_date subscription_end_date');
         if (!company) {
             return res.status(404).json({ 
                 success : false,
@@ -63,7 +63,9 @@ export const getCompanySubscription = async (req, res) => {
         }
         res.json({ 
             success: true,
-            subscription: company.subscription
+            subscription: company.plan,
+            subscription_start_date: company.subscription_start_date,
+            subscription_end_date: company.subscription_end_date
         });
     } catch (error) {
         res.status(500).json({ 
