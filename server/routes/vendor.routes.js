@@ -1,30 +1,56 @@
 import express from 'express';
 
 const router = express.Router();
-import { 
+import {
     createVendor,
-    getVendors, 
-    getVendorById, 
-    updateVendor, 
+    getVendors,
+    getVendorById,
+    updateVendor,
     deleteVendor,
     getVendorProducts,
+    assignProductToVendor,
+    removeProductFromVendor,
     getVendorOrders,
     getVendorInvoices,
     getVendorAlerts,
+    createSupplyRequest,
+    getSupplyRequests,
+    updateSupplyRequestStatus,
     getVendorStats,
+    getVendorPerformanceMetrics,
+    getVendorDashboard,
+    rateVendor,
 } from '../controllers/vendor.controller.js';
 import { protect } from '../middleware/auth.middleware.js';
 
+// Basic CRUD operations
+router.post('/', protect, createVendor);
+router.get('/', protect, getVendors);
+router.get('/:id', protect, getVendorById);
+router.put('/:id', protect, updateVendor);
+router.delete('/:id', protect, deleteVendor);
 
-router.post('/',protect, createVendor);
-router.get('/',protect, getVendors);
-router.get('/:id',protect, getVendorById);
-router.put('/:id',protect, updateVendor);
-router.delete('/:id',protect, deleteVendor);
-router.get('/:id/products',protect, getVendorProducts);
-router.get('/:id/orders',protect, getVendorOrders);
-router.get('/:id/invoices',protect, getVendorInvoices);
-router.get('/:id/alerts',protect, getVendorAlerts);
-router.get('/:id/stats',protect, getVendorStats);
+// Vendor-Product associations
+router.get('/:id/products', protect, getVendorProducts);
+router.post('/:id/products', protect, assignProductToVendor);
+router.delete('/:id/products/:productId', protect, removeProductFromVendor);
+
+// Vendor Orders, Invoices, Alerts
+router.get('/:id/orders', protect, getVendorOrders);
+router.get('/:id/invoices', protect, getVendorInvoices);
+router.get('/:id/alerts', protect, getVendorAlerts);
+
+// Supply Request endpoints
+router.post('/:id/supply-requests', protect, createSupplyRequest);
+router.get('/:id/supply-requests', protect, getSupplyRequests);
+router.put('/:id/supply-requests/:requestId', protect, updateSupplyRequestStatus);
+
+// Performance and Analytics
+router.get('/:id/stats', protect, getVendorStats);
+router.get('/:id/performance', protect, getVendorPerformanceMetrics);
+router.get('/:id/dashboard', protect, getVendorDashboard);
+
+// Vendor Rating
+router.put('/:id/rate', protect, rateVendor);
 
 export default router;

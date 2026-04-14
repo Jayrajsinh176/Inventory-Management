@@ -270,3 +270,32 @@ export const deleteCategory = async (req, res) => {
     return handleCategoryError(res, error);
   }
 };
+
+
+/**
+ * @description get all products by category
+ * @routes GET /api/category/:categoryId/products
+ * @access Protected
+ */
+export const getProductsByCategory = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    if (!isValidObjectId(categoryId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Category ID",
+      });
+    }
+    const products = await Product.find({
+      company: req.user.company,
+      category: categoryId,
+    }).sort({ createdAt: -1 });
+    return res.status(200).json({
+      success: true,
+      count: products.length,
+      data: products,
+    });
+  } catch (error) {
+    return handleCategoryError(res, error);
+  }
+};

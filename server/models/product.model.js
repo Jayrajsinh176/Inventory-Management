@@ -51,6 +51,8 @@ const productSchema = new mongoose.Schema(
       type : String,
       trim : true,
       maxlength : 100,
+      required : true,
+      default : 'Unknown Vendor',
     },
     lowStockThreshold: {
       type: Number,
