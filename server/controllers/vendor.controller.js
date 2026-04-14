@@ -14,7 +14,7 @@ import SupplyRequest from '../models/supplyRequest.model.js';
 export const createVendor = async (req, res) => {
     try {
         const { name, email, phone, address } = req.body;
-        const companyId = new mongoose.Types.ObjectId(req.user.companyId);
+        const companyId = new mongoose.Types.ObjectId(req.user.company);
 
         if (!name || !phone) {
             return res.status(400).json({
@@ -61,7 +61,7 @@ export const createVendor = async (req, res) => {
  */
 export const getVendors = async (req, res) => {
     try {
-        const companyId = new mongoose.Types.ObjectId(req.user.companyId);
+        const companyId = new mongoose.Types.ObjectId(req.user.company);
         const vendors = await Vendor.find({ companyId }).populate('products');
         res.status(200).json({
             success: true,
@@ -86,7 +86,7 @@ export const getVendors = async (req, res) => {
 export const getVendorById = async (req, res) => {
     try {
         const { id } = req.params;
-        const companyId = new mongoose.Types.ObjectId(req.user.companyId);
+        const companyId = new mongoose.Types.ObjectId(req.user.company);
 
         const vendor = await Vendor.findOne({ _id: id, companyId }).populate('products');
         if (!vendor) {
@@ -118,7 +118,7 @@ export const getVendorById = async (req, res) => {
 export const updateVendor = async (req, res) => {
     try {
         const { id } = req.params;
-        const companyId = new mongoose.Types.ObjectId(req.user.companyId);
+        const companyId = new mongoose.Types.ObjectId(req.user.company);
         const { name, email, phone, address, status } = req.body;
 
         const vendor = await Vendor.findOne({ _id: id, companyId });
@@ -159,7 +159,7 @@ export const updateVendor = async (req, res) => {
 export const deleteVendor = async (req, res) => {
     try {
         const { id } = req.params;
-        const companyId = new mongoose.Types.ObjectId(req.user.companyId);
+        const companyId = new mongoose.Types.ObjectId(req.user.company);
 
         const vendor = await Vendor.findOne({ _id: id, companyId });
         if (!vendor) {
@@ -202,7 +202,7 @@ export const deleteVendor = async (req, res) => {
 export const getVendorProducts = async (req, res) => {
     try {
         const { id } = req.params;
-        const companyId = new mongoose.Types.ObjectId(req.user.companyId);
+        const companyId = new mongoose.Types.ObjectId(req.user.company);
 
         const vendor = await Vendor.findOne({ _id: id, companyId });
         if (!vendor) {
@@ -241,7 +241,7 @@ export const assignProductToVendor = async (req, res) => {
     try {
         const { id } = req.params;
         const { productId } = req.body;
-        const companyId = new mongoose.Types.ObjectId(req.user.companyId);
+        const companyId = new mongoose.Types.ObjectId(req.user.company);
 
         if (!productId) {
             return res.status(400).json({
@@ -298,7 +298,7 @@ export const assignProductToVendor = async (req, res) => {
 export const removeProductFromVendor = async (req, res) => {
     try {
         const { id, productId } = req.params;
-        const companyId = new mongoose.Types.ObjectId(req.user.companyId);
+        const companyId = new mongoose.Types.ObjectId(req.user.company);
 
         const vendor = await Vendor.findOne({ _id: id, companyId });
         if (!vendor) {
@@ -346,7 +346,7 @@ export const removeProductFromVendor = async (req, res) => {
 export const getVendorOrders = async (req, res) => {
     try {
         const { id } = req.params;
-        const companyId = new mongoose.Types.ObjectId(req.user.companyId);
+        const companyId = new mongoose.Types.ObjectId(req.user.company);
 
         const vendor = await Vendor.findOne({ _id: id, companyId });
         if (!vendor) {
@@ -389,7 +389,7 @@ export const getVendorOrders = async (req, res) => {
 export const getVendorInvoices = async (req, res) => {
     try {
         const { id } = req.params;
-        const companyId = new mongoose.Types.ObjectId(req.user.companyId);
+        const companyId = new mongoose.Types.ObjectId(req.user.company);
 
         const vendor = await Vendor.findOne({ _id: id, companyId });
         if (!vendor) {
@@ -434,7 +434,7 @@ export const getVendorInvoices = async (req, res) => {
 export const getVendorAlerts = async (req, res) => {
     try {
         const { id } = req.params;
-        const companyId = new mongoose.Types.ObjectId(req.user.companyId);
+        const companyId = new mongoose.Types.ObjectId(req.user.company);
 
         const vendor = await Vendor.findOne({ _id: id, companyId });
         if (!vendor) {
@@ -475,7 +475,7 @@ export const createSupplyRequest = async (req, res) => {
     try {
         const { id } = req.params;
         const { productId, quantity, expectedDeliveryDate, quotedPrice, notes } = req.body;
-        const companyId = new mongoose.Types.ObjectId(req.user.companyId);
+        const companyId = new mongoose.Types.ObjectId(req.user.company);
         const userId = req.user._id;
 
         if (!productId || !quantity || !expectedDeliveryDate || !quotedPrice) {
@@ -545,7 +545,7 @@ export const getSupplyRequests = async (req, res) => {
     try {
         const { id } = req.params;
         const { status } = req.query;
-        const companyId = new mongoose.Types.ObjectId(req.user.companyId);
+        const companyId = new mongoose.Types.ObjectId(req.user.company);
 
         const vendor = await Vendor.findOne({ _id: id, companyId });
         if (!vendor) {
@@ -589,7 +589,7 @@ export const updateSupplyRequestStatus = async (req, res) => {
     try {
         const { id, requestId } = req.params;
         const { status, actualDeliveryDate } = req.body;
-        const companyId = new mongoose.Types.ObjectId(req.user.companyId);
+        const companyId = new mongoose.Types.ObjectId(req.user.company);
 
         if (!status) {
             return res.status(400).json({
@@ -616,32 +616,10 @@ export const updateSupplyRequestStatus = async (req, res) => {
 
         supplyRequest.status = status;
 
-        // If delivered, calculate on-time delivery
+        // If delivered, update the delivery date
         if (status === 'delivered' && actualDeliveryDate) {
             supplyRequest.actualDeliveryDate = new Date(actualDeliveryDate);
             supplyRequest.isOnTime = new Date(actualDeliveryDate) <= supplyRequest.expectedDeliveryDate;
-
-            // Update vendor metrics
-            vendor.totalOrders = (vendor.totalOrders || 0) + 1;
-            if (supplyRequest.isOnTime) {
-                vendor.totalOnTimeDeliveries = (vendor.totalOnTimeDeliveries || 0) + 1;
-            } else {
-                vendor.totalLateDeliveries = (vendor.totalLateDeliveries || 0) + 1;
-            }
-
-            // Calculate delivery time in days
-            const deliveryTime = Math.ceil((supplyRequest.actualDeliveryDate - supplyRequest.createdAt) / (1000 * 60 * 60 * 24));
-            vendor.averageDeliveryTime = Math.ceil(
-                ((vendor.averageDeliveryTime || 0) * ((vendor.totalOrders || 1) - 1) + deliveryTime) / (vendor.totalOrders || 1)
-            );
-
-            // Calculate on-time delivery percentage
-            vendor.onTimeDeliveryPercentage = Math.round(
-                ((vendor.totalOnTimeDeliveries || 0) / (vendor.totalOrders || 1)) * 100
-            );
-
-            vendor.lastPerformanceUpdate = new Date();
-            await vendor.save();
         }
 
         await supplyRequest.save();
@@ -668,7 +646,7 @@ export const updateSupplyRequestStatus = async (req, res) => {
 export const getVendorStats = async (req, res) => {
     try {
         const { id } = req.params;
-        const companyId = new mongoose.Types.ObjectId(req.user.companyId);
+        const companyId = new mongoose.Types.ObjectId(req.user.company);
 
         const vendor = await Vendor.findOne({ _id: id, companyId });
         if (!vendor) {
@@ -694,11 +672,6 @@ export const getVendorStats = async (req, res) => {
             data: {
                 totalProducts,
                 totalSupplyRequests: supplyRequests,
-                totalOrders: vendor.totalOrders,
-                totalOnTimeDeliveries: vendor.totalOnTimeDeliveries,
-                totalLateDeliveries: vendor.totalLateDeliveries,
-                averageDeliveryTime: vendor.averageDeliveryTime,
-                onTimeDeliveryPercentage: vendor.onTimeDeliveryPercentage,
             }
         });
     } catch (error) {
@@ -718,7 +691,7 @@ export const getVendorStats = async (req, res) => {
 export const getVendorPerformanceMetrics = async (req, res) => {
     try {
         const { id } = req.params;
-        const companyId = new mongoose.Types.ObjectId(req.user.companyId);
+        const companyId = new mongoose.Types.ObjectId(req.user.company);
 
         const vendor = await Vendor.findOne({ _id: id, companyId });
         if (!vendor) {
@@ -747,26 +720,13 @@ export const getVendorPerformanceMetrics = async (req, res) => {
             status: 'delivered'
         });
 
-        const onTimeRequests = await SupplyRequest.countDocuments({
-            vendorId: id,
-            companyId,
-            status: 'delivered',
-            isOnTime: true
-        });
-
         const metrics = {
             vendorId: id,
             vendorName: vendor.name,
             totalSupplyRequests: totalRequests,
             deliveredRequests,
             pendingRequests: totalRequests - deliveredRequests,
-            onTimeDeliveryRate: deliveredRequests > 0 ? ((onTimeRequests / deliveredRequests) * 100).toFixed(2) : 0,
-            averageDeliveryTime: vendor.averageDeliveryTime,
-            qualityRating: vendor.qualityRating,
-            onTimeDeliveryPercentage: vendor.onTimeDeliveryPercentage,
-            totalOrders: vendor.totalOrders,
             recentDeliveries: recentRequests,
-            lastUpdated: vendor.lastPerformanceUpdate
         };
 
         res.status(200).json({
@@ -791,7 +751,7 @@ export const getVendorPerformanceMetrics = async (req, res) => {
 export const getVendorDashboard = async (req, res) => {
     try {
         const { id } = req.params;
-        const companyId = new mongoose.Types.ObjectId(req.user.companyId);
+        const companyId = new mongoose.Types.ObjectId(req.user.company);
 
         const vendor = await Vendor.findOne({ _id: id, companyId }).populate('products');
         if (!vendor) {
@@ -855,10 +815,6 @@ export const getVendorDashboard = async (req, res) => {
                 totalSupplyRequests,
                 pendingRequests: pendingSupplyRequests,
                 deliveredRequests: deliveredSupplyRequests,
-                averageDeliveryTime: vendor.averageDeliveryTime,
-                qualityRating: vendor.qualityRating,
-                onTimeDeliveryPercentage: vendor.onTimeDeliveryPercentage,
-                totalOrders: vendor.totalOrders,
             },
             recentActivity: {
                 supplyRequests: recentSupplyRequests,
@@ -891,7 +847,7 @@ export const rateVendor = async (req, res) => {
     try {
         const { id } = req.params;
         const { rating, notes } = req.body;
-        const companyId = new mongoose.Types.ObjectId(req.user.companyId);
+        const companyId = new mongoose.Types.ObjectId(req.user.company);
 
         if (!rating || rating < 0 || rating > 5) {
             return res.status(400).json({
@@ -908,18 +864,12 @@ export const rateVendor = async (req, res) => {
             });
         }
 
-        // Update vendor quality rating (average)
-        const currentRating = vendor.qualityRating || 0;
-        const totalOrders = vendor.totalOrders || 1;
-        vendor.qualityRating = ((currentRating * (totalOrders - 1)) + rating) / totalOrders;
-        vendor.averageProductQuality = vendor.qualityRating;
-        vendor.lastPerformanceUpdate = new Date();
-
-        await vendor.save();
+        // Note: Rating functionality has been simplified
+        // You can extend this to track ratings separately if needed in future
 
         res.status(200).json({
             success: true,
-            message: 'Vendor rated successfully',
+            message: 'Vendor rating received successfully',
             data: vendor
         });
     } catch (error) {

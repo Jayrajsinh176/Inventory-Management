@@ -11,6 +11,7 @@ import {
   MdNotifications,
   MdPerson,
   MdFactCheck,
+  MdBusiness,
 } from 'react-icons/md';
 
 const Sidebar = () => {
@@ -56,6 +57,13 @@ const Sidebar = () => {
           path="/categories"
           active={isActive('/categories')}
           onClick={() => navigate('/categories')}
+        />
+        <NavItem
+          icon="business"
+          label="Vendors"
+          path="/vendors"
+          active={isActive('/vendors')}
+          onClick={() => navigate('/vendors')}
         />
         <NavItem
           icon="group"
@@ -128,6 +136,7 @@ const NavItem = ({ icon, label, active, onClick, path }) => {
     dashboard: MdDashboard,
     inventory_2: MdInventory2,
     category: MdCategory,
+    business: MdBusiness,
     group: MdGroup,
     payments: MdPayments,
     settings: MdSettings,

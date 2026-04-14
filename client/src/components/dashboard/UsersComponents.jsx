@@ -59,16 +59,18 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
       
       // Apply role filter
       if (roleFilter) {
-        filteredUsers = filteredUsers.filter(user => 
-          user.role?.toLowerCase() === roleFilter.toLowerCase()
-        );
+        filteredUsers = filteredUsers.filter(user => {
+          const userRole = typeof user.role === 'string' ? user.role : user.role || '';
+          return userRole.toLowerCase() === roleFilter.toLowerCase();
+        });
       }
       
       // Apply status filter
       if (statusFilter) {
-        filteredUsers = filteredUsers.filter(user => 
-          (user.status || 'active').toLowerCase() === statusFilter.toLowerCase()
-        );
+        filteredUsers = filteredUsers.filter(user => {
+          const userStatus = typeof user.status === 'string' ? user.status : user.status?.value || 'active';
+          return userStatus.toLowerCase() === statusFilter.toLowerCase();
+        });
       }
       
       setUsers(filteredUsers);
@@ -158,7 +160,8 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
   };
 
   const getStatusColor = (status) => {
-    return status === 'active' ? '#28A745' : '#6C757D';
+    const statusValue = typeof status === 'string' ? status : status?.value || 'active';
+    return statusValue.toLowerCase() === 'active' ? '#28A745' : '#6C757D';
   };
 
   const getInitials = (name) => {

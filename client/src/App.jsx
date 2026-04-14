@@ -12,6 +12,7 @@ import UsersPage from './pages/UsersPage';
 import EditUserPage from './pages/EditUserPage';
 import ProfilePage from './pages/ProfilePage';
 import NotificationsPage from './pages/NotificationsPage';
+import VendorsPage from './pages/VendorsPage';
 import BillingPage from './pages/billing/BillingPage';
 import PaymentPage from './pages/billing/PaymentPage';
 import ReviewPage from './pages/billing/ReviewPage';
@@ -42,6 +43,9 @@ function App() {
         } />
         <Route path="/categories" element={
           <ProtectedRoute><CategoriesPage /></ProtectedRoute>
+        } />
+        <Route path="/vendors" element={
+          <ProtectedRoute><VendorsPage /></ProtectedRoute>
         } />
         <Route path="/subscription" element={
           <ProtectedRoute><SubscriptionPage /></ProtectedRoute>

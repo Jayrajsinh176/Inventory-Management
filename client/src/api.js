@@ -671,3 +671,121 @@ export const updateSubscriptionPlan = async (planId) => {
   }
   return data;
 }
+// ============================================
+// VENDORS API
+// ============================================
+
+/**
+ * Get all vendors for the company
+ * @returns {Promise<Object>} Vendors list with details
+ */
+export async function getVendors() {
+  const response = await fetch(`${API_BASE_URL}/api/vendor`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeader(),
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Failed to fetch vendors');
+  }
+
+  return data;
+}
+
+/**
+ * Get a single vendor by ID
+ * @param {string} vendorId - Vendor ID
+ * @returns {Promise<Object>} Vendor details with products
+ */
+export async function getVendorById(vendorId) {
+  const response = await fetch(`${API_BASE_URL}/api/vendor/${vendorId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeader(),
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Failed to fetch vendor details');
+  }
+
+  return data;
+}
+
+/**
+ * Get products supplied by a vendor
+ * @param {string} vendorId - Vendor ID
+ * @returns {Promise<Object>} List of products from this vendor
+ */
+export async function getVendorProducts(vendorId) {
+  const response = await fetch(`${API_BASE_URL}/api/vendor/${vendorId}/products`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeader(),
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Failed to fetch vendor products');
+  }
+
+  return data;
+}
+
+/**
+ * Get orders/history associated with a vendor
+ * @param {string} vendorId - Vendor ID
+ * @returns {Promise<Object>} List of orders completed with this vendor
+ */
+export async function getVendorOrders(vendorId) {
+  const response = await fetch(`${API_BASE_URL}/api/vendor/${vendorId}/orders`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeader(),
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Failed to fetch vendor orders');
+  }
+
+  return data;
+}
+
+/**
+ * Create a new vendor
+ * @param {Object} vendorData - { name, phone, email, address }
+ * @returns {Promise<Object>} Created vendor data
+ */
+export async function createVendor(vendorData) {
+  const response = await fetch(`${API_BASE_URL}/api/vendor`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeader(),
+    },
+    body: JSON.stringify(vendorData),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Failed to create vendor');
+  }
+
+  return data;
+}

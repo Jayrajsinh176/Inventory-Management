@@ -30,35 +30,6 @@ const vendorSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Product',
     }],
-    // Performance metrics
-    averageDeliveryTime: {
-        type: Number,
-        default: 0, // in days
-    },
-    qualityRating: {
-        type: Number,
-        default: 0,
-        min: 0,
-        max: 5,
-    },
-    onTimeDeliveryPercentage: {
-        type: Number,
-        default: 0,
-        min: 0,
-        max: 100,
-    },
-    totalOrders: {
-        type: Number,
-        default: 0,
-    },
-    totalOnTimeDeliveries: {
-        type: Number,
-        default: 0,
-    },
-    totalLateDeliveries: {
-        type: Number,
-        default: 0,
-    },
     totalSupplyRequests: {
         type: Number,
         default: 0,
@@ -84,6 +55,5 @@ const vendorSchema = new mongoose.Schema({
 
 vendorSchema.index({ companyId: 1 });
 vendorSchema.index({ status: 1 });
-vendorSchema.index({ qualityRating: -1 });
 
 export default mongoose.model('Vendor', vendorSchema);
