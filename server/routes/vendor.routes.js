@@ -16,10 +16,6 @@ import {
     createSupplyRequest,
     getSupplyRequests,
     updateSupplyRequestStatus,
-    getVendorStats,
-    getVendorPerformanceMetrics,
-    getVendorDashboard,
-    rateVendor,
 } from '../controllers/vendor.controller.js';
 import { protect } from '../middleware/auth.middleware.js';
 
@@ -45,12 +41,5 @@ router.post('/:id/supply-requests', protect, createSupplyRequest);
 router.get('/:id/supply-requests', protect, getSupplyRequests);
 router.put('/:id/supply-requests/:requestId', protect, updateSupplyRequestStatus);
 
-// Performance and Analytics
-router.get('/:id/stats', protect, getVendorStats);
-router.get('/:id/performance', protect, getVendorPerformanceMetrics);
-router.get('/:id/dashboard', protect, getVendorDashboard);
-
-// Vendor Rating
-router.put('/:id/rate', protect, rateVendor);
 
 export default router;
