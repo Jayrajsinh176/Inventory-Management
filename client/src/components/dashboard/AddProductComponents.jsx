@@ -1,7 +1,8 @@
 import { MdEdit, MdInventory2, MdImage } from 'react-icons/md';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCategories, createProduct, updateProduct } from '../../api';
+import toast from 'react-hot-toast';
+import { getCategories, getVendors, createProduct, updateProduct } from '../../api';
 
 const getCategoryValue = (category) => {
   if (!category) {
@@ -18,29 +19,38 @@ const getCategoryValue = (category) => {
 const AddProductForm = ({ product = null, onSubmitSuccess = null }) => {
   const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(false);
   const isEditMode = !!product;
   const [formData, setFormData] = useState({
     name: product?.name || '',
     sku: product?.sku || '',
     category: getCategoryValue(product?.category),
+    vendor: product?.vendor?._id || product?.vendor || '',
     price: product?.price ? String(product.price) : '',
     stock: product?.stock ? String(product.stock) : '',
   });
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchData = async () => {
       try {
-        const response = await getCategories();
-        if (response.data) {
-          setCategories(response.data);
+        const categoryResponse = await getCategories();
+        if (categoryResponse.data) {
+          setCategories(categoryResponse.data);
+        }
+
+        const vendorResponse = await getVendors();
+        if (vendorResponse.vendors) {
+          setVendors(vendorResponse.vendors);
+        } else if (vendorResponse.data) {
+          setVendors(vendorResponse.data);
         }
       } catch (error) {
-        console.error('Failed to fetch categories:', error);
+        console.error('Failed to fetch data:', error);
       }
     };
 
-    fetchCategories();
+    fetchData();
   }, []);
 
   // Update form data when product prop changes (for edit mode)
@@ -50,6 +60,7 @@ const AddProductForm = ({ product = null, onSubmitSuccess = null }) => {
         name: product.name || '',
         sku: product.sku || '',
         category: getCategoryValue(product.category),
+        vendor: product.vendor?._id || product.vendor || '',
         price: product.price ? String(product.price) : '',
         stock: product.stock ? String(product.stock) : '',
       });
@@ -75,7 +86,7 @@ const AddProductForm = ({ product = null, onSubmitSuccess = null }) => {
     e.preventDefault();
     
     if (!formData.name || !formData.sku || !formData.category) {
-      alert('Please fill in all required fields');
+      toast.error('Please fill in all required fields');
       return;
     }
 
@@ -91,7 +102,7 @@ const AddProductForm = ({ product = null, onSubmitSuccess = null }) => {
       if (isEditMode) {
         const response = await updateProduct(product.id, productPayload);
         if (response) {
-          alert('Product updated successfully!');
+          toast.success('Product updated successfully!');
           if (onSubmitSuccess) {
             onSubmitSuccess();
           }
@@ -99,12 +110,13 @@ const AddProductForm = ({ product = null, onSubmitSuccess = null }) => {
       } else {
         const response = await createProduct(productPayload);
         if (response) {
-          alert('Product created successfully!');
+          toast.success('Product created successfully!');
           // Reset form
           setFormData({
             name: '',
             sku: '',
             category: '',
+            vendor: '',
             price: '',
             stock: '',
           });
@@ -114,7 +126,7 @@ const AddProductForm = ({ product = null, onSubmitSuccess = null }) => {
         }
       }
     } catch (error) {
-      alert(error.message || `Failed to ${isEditMode ? 'update' : 'create'} product`);
+      toast.error(error.message || `Failed to ${isEditMode ? 'update' : 'create'} product`);
     } finally {
       setLoading(false);
     }
@@ -194,6 +206,27 @@ const AddProductForm = ({ product = null, onSubmitSuccess = null }) => {
                 {categories.map((cat) => (
                   <option key={cat.id} value={cat.id}>
                     {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Vendor */}
+            <div className="col-span-2">
+              <label className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6C757D] mb-2">
+                Vendor
+              </label>
+              <select 
+                name="vendor"
+                value={formData.vendor}
+                onChange={handleChange}
+                disabled={loading}
+                className="w-full h-11 bg-white border border-[#DEE2E6] rounded-lg px-4 text-[14px] text-[#212529] focus:outline-none focus:border-[#000000] transition-colors appearance-none cursor-pointer disabled:opacity-50"
+              >
+                <option value="">Select Vendor (Optional)</option>
+                {vendors.map((vendor) => (
+                  <option key={vendor._id || vendor.id} value={vendor._id || vendor.id}>
+                    {vendor.name}
                   </option>
                 ))}
               </select>

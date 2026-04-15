@@ -1,6 +1,7 @@
 import { MdAdd, MdDelete, MdEdit, MdSearch } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { deleteProduct, getCategories, getProducts } from '../../api';
 import ConfirmationModal from '../common/ConfirmationModal';
 
@@ -212,7 +213,7 @@ const ProductsTable = ({ onProductsChanged }) => {
     const newStock = parseInt(editingStockValue, 10);
     
     if (isNaN(newStock) || newStock < 0) {
-      alert('Please enter a valid stock value (0 or more)');
+      toast.error('Please enter a valid stock value (0 or more)');
       return;
     }
 
@@ -252,7 +253,7 @@ const ProductsTable = ({ onProductsChanged }) => {
       setDeleteProductId(null);
     } catch (deleteError) {
       console.error('Failed to delete product:', deleteError);
-      alert(deleteError.message || 'Failed to delete product');
+      toast.error(deleteError.message || 'Failed to delete product');
       setIsDeleteConfirmOpen(false);
       setDeleteProductId(null);
     }

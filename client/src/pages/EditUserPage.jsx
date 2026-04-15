@@ -3,6 +3,7 @@ import Header from '../components/dashboard/Header';
 import { MdChevronRight } from 'react-icons/md';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { getUserById, updateUser } from '../api';
 
 const EditUserPage = () => {
@@ -57,17 +58,17 @@ const EditUserPage = () => {
     e.preventDefault();
     
     if (!formData.name || !formData.email || !formData.phone) {
-      alert('Please fill in all required fields');
+      toast.error('Please fill in all required fields');
       return;
     }
 
     setUpdatingUser(true);
     try {
       await updateUser(userId, formData);
-      alert('User updated successfully!');
+      toast.success('User updated successfully!');
       navigate('/users');
     } catch (err) {
-      alert(err.message || 'Failed to update user');
+      toast.error(err.message || 'Failed to update user');
     } finally {
       setUpdatingUser(false);
     }

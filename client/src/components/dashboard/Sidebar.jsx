@@ -45,11 +45,11 @@ const Sidebar = () => {
           onClick={() => navigate('/dashboard')}
         />
         <NavItem
-          icon="inventory_2"
-          label="Products"
-          path="/products"
-          active={isActive('/products') || isActive('/products/add')}
-          onClick={() => navigate('/products')}
+          icon="business"
+          label="Vendors"
+          path="/vendors"
+          active={isActive('/vendors')}
+          onClick={() => navigate('/vendors')}
         />
         <NavItem
           icon="category"
@@ -59,11 +59,11 @@ const Sidebar = () => {
           onClick={() => navigate('/categories')}
         />
         <NavItem
-          icon="business"
-          label="Vendors"
-          path="/vendors"
-          active={isActive('/vendors')}
-          onClick={() => navigate('/vendors')}
+          icon="inventory_2"
+          label="Products"
+          path="/products"
+          active={isActive('/products') || isActive('/products/add')}
+          onClick={() => navigate('/products')}
         />
         <NavItem
           icon="group"

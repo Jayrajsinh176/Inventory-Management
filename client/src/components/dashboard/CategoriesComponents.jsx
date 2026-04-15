@@ -1,7 +1,10 @@
-import { MdAdd, MdEdit, MdDelete, MdCheck, MdClose } from 'react-icons/md';
+import { MdAdd, MdEdit, MdDelete, MdCheck, MdClose, MdArrowBack, MdSearch } from 'react-icons/md';
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { getCategories, createCategory, deleteCategory, updateCategory } from '../../api';
 import ConfirmationModal from '../common/ConfirmationModal.jsx';
+
+const API_BASE_URL = 'http://localhost:5000';
 
 const CategoriesHeader = ({ onAddClick, loading }) => {
   return (
@@ -34,6 +37,12 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
   const [editingName, setEditingName] = useState('');
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [deleteCategoryId, setDeleteCategoryId] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categoryProducts, setCategoryProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [searchProductQuery, setSearchProductQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
   // Fetch categories on mount
   useEffect(() => {
     fetchCategories();
@@ -57,11 +66,106 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
     }
   };
 
+  const fetchCategoryProducts = async (categoryId) => {
+    setLoadingProducts(true);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/category/${categoryId}/products`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        }
+      );
+      const data = await response.json();
+      if (data.success) {
+        setCategoryProducts(data.data || []);
+      } else {
+        toast.error(data.message || 'Failed to fetch products');
+      }
+    } catch (err) {
+      console.error('Error fetching category products:', err);
+      toast.error('Failed to fetch category products');
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const handleCategoryClick = (category) => {
+    setSelectedCategory(category);
+    fetchCategoryProducts(category.id);
+    setSearchProductQuery('');
+    setSearchResults([]);
+  };
+
+  const searchProductsToAdd = async (query) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/category/${selectedCategory.id}/search-products?query=${encodeURIComponent(query)}&limit=5`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        }
+      );
+      const data = await response.json();
+      if (data.success) {
+        setSearchResults(data.data || []);
+      } else {
+        toast.error(data.message || 'Failed to search products');
+      }
+    } catch (err) {
+      console.error('Error searching products:', err);
+      toast.error('Failed to search products');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleAddProductToCategory = async (productId) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/category/${selectedCategory.id}/products/${productId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        }
+      );
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Product added to category successfully!');
+        // Refresh the category products
+        fetchCategoryProducts(selectedCategory.id);
+        // Clear search
+        setSearchProductQuery('');
+        setSearchResults([]);
+      } else {
+        toast.error(data.message || 'Failed to add product');
+      }
+    } catch (err) {
+      console.error('Error adding product:', err);
+      toast.error('Failed to add product to category');
+    }
+  };
+
   const handleAddCategory = async (e) => {
     e.preventDefault();
     
     if (!newCategoryName.trim()) {
-      alert('Please enter a category name');
+      toast.error('Please enter a category name');
       return;
     }
 
@@ -72,7 +176,7 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
       setShowAddForm(false);
       await fetchCategories(); // Refresh the list
     } catch (err) {
-      alert(err.message || 'Failed to create category');
+      toast.error(err.message || 'Failed to create category');
     } finally {
       setAddingCategory(false);
     }
@@ -93,7 +197,7 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
         setDeleteCategoryId(null);
       } catch (deleteError) {
         console.error('Failed to delete category:', deleteError);
-        alert(deleteError.message || 'Failed to delete category');
+        toast.error(deleteError.message || 'Failed to delete category');
         setIsDeleteConfirmOpen(false);
         setDeleteCategoryId(null);
       }
@@ -111,7 +215,7 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
 
   const handleSaveEdit = async () => {
     if (!editingName.trim()) {
-      alert('Category name cannot be empty');
+      toast.error('Category name cannot be empty');
       return;
     }
 
@@ -119,7 +223,7 @@ const CategoriesGrid = ({ showAddForm, setShowAddForm }) => {
     if (response.success) {
       await fetchCategories(); // Refresh the list
     } else {      
-      alert(response.message || 'Failed to update category');
+      toast.error(response.message || 'Failed to update category');
     }
     setEditingId(null);
     setEditingName('');

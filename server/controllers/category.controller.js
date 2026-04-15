@@ -299,3 +299,121 @@ export const getProductsByCategory = async (req, res) => {
     return handleCategoryError(res, error);
   }
 };
+
+/**
+ * @description Search for products not in category (to add them)
+ * @route GET /api/category/:categoryId/search-products
+ * @access Protected
+ */
+export const searchProductsToAdd = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const { query, limit = 5 } = req.query;
+
+    if (!isValidObjectId(categoryId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Category ID",
+      });
+    }
+
+    if (!query || query.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Search query cannot be empty",
+      });
+    }
+
+    const searchRegex = new RegExp(query, 'i');
+    
+    // Find products NOT in this category
+    const products = await Product.find({
+      company: req.user.company,
+      category: { $ne: new mongoose.Types.ObjectId(categoryId) },
+      $or: [
+        { name: searchRegex },
+        { sku: searchRegex }
+      ]
+    })
+      .select('name sku price stock category vendor')
+      .populate('category', 'name')
+      .populate('vendor', 'name')
+      .limit(parseInt(limit));
+
+    return res.status(200).json({
+      success: true,
+      count: products.length,
+      data: products,
+    });
+  } catch (error) {
+    return handleCategoryError(res, error);
+  }
+};
+
+/**
+ * @description Add product to category
+ * @route PUT /api/category/:categoryId/products/:productId
+ * @access Protected
+ */
+export const addProductToCategory = async (req, res) => {
+  try {
+    const { categoryId, productId } = req.params;
+
+    if (!isValidObjectId(categoryId) || !isValidObjectId(productId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Category ID or Product ID",
+      });
+    }
+
+    // Check if category exists
+    const category = await Category.findOne({
+      _id: categoryId,
+      company: req.user.company,
+    });
+
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found",
+      });
+    }
+
+    // Check if product exists and belongs to company
+    const product = await Product.findOne({
+      _id: productId,
+      company: req.user.company,
+    });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    // Update product's category
+    product.category = categoryId;
+    await product.save();
+
+    await logActivity({
+      userId: req.user._id,
+      companyId: req.user.company,
+      action: "added_product_to_category",
+      details: `Added product ${product.name} to category ${category.name}`,
+      metadata: {
+        categoryId,
+        productId,
+        productName: product.name,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Product added to category successfully",
+      data: product,
+    });
+  } catch (error) {
+    return handleCategoryError(res, error);
+  }
+};

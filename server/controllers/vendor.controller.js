@@ -174,8 +174,8 @@ export const deleteVendor = async (req, res) => {
 
         // Remove vendor reference from products
         await Product.updateMany(
-            { vendor: vendor.name, company: companyId },
-            { vendor: 'Unknown Vendor' }
+            { vendor: vendor._id, company: companyId },
+            { vendor: null }
         );
 
         // Delete the vendor
@@ -213,7 +213,7 @@ export const getVendorProducts = async (req, res) => {
         }
 
         const products = await Product.find({
-            vendor: vendor.name,
+            vendor: vendor._id,
             company: companyId
         }).populate('category');
 
@@ -267,7 +267,7 @@ export const assignProductToVendor = async (req, res) => {
         }
 
         // Update product with vendor
-        product.vendor = vendor.name;
+        product.vendor = vendor._id;
         await product.save();
 
         // Add product to vendor's product list if not already there
@@ -317,7 +317,7 @@ export const removeProductFromVendor = async (req, res) => {
         }
 
         // Update product to remove vendor
-        product.vendor = 'Unknown Vendor';
+        product.vendor = null;
         await product.save();
 
         // Remove product from vendor's product list
@@ -358,12 +358,12 @@ export const getVendorOrders = async (req, res) => {
 
         const orders = await Order.find({ company: companyId }).populate({
             path: 'items.product',
-            match: { vendor: vendor.name }
+            match: { vendor: vendor._id }
         });
 
         // Filter orders that actually contain vendor's products
         const vendorOrders = orders.filter(order =>
-            order.items.some(item => item.product && item.product.vendor === vendor.name)
+            order.items.some(item => item.product && item.product.vendor?.toString() === vendor._id.toString())
         );
 
         res.status(200).json({
@@ -408,7 +408,7 @@ export const getVendorInvoices = async (req, res) => {
 
         // Filter invoices that contain vendor's products
         const vendorInvoices = invoices.filter(invoice =>
-            invoice.order && invoice.order.items.some(item => item.product && item.product.vendor === vendor.name)
+            invoice.order && invoice.order.items.some(item => item.product && item.product.vendor?.toString() === vendor._id.toString())
         );
 
         res.status(200).json({
@@ -448,7 +448,7 @@ export const getVendorAlerts = async (req, res) => {
 
         // Filter alerts for vendor's products
         const vendorAlerts = alerts.filter(alert =>
-            alert.product && alert.product.vendor === vendor.name
+            alert.product && alert.product.vendor?.toString() === vendor._id.toString()
         );
 
         res.status(200).json({
