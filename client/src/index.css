@@ -128,3 +128,16 @@ body {
   background: var(--border-strong);
   border-radius: var(--radius-full);
 }
+
+/* Remove spinner arrows - Chrome, Edge, Safari */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Remove spinner arrows - Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
