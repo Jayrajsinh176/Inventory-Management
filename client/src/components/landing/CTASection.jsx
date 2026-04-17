@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 const CTASection = () => {
   return (
@@ -51,7 +52,7 @@ const CTASection = () => {
             Get Started Free
           </Link>
           <button
-            onClick={() => alert('Demo booking coming soon!')}
+            onClick={() => toast('Demo booking coming soon!')}
             style={{
               border: '1px solid rgba(255,255,255,0.3)',
               color: '#ffffff',

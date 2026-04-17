@@ -99,10 +99,11 @@ const InventoryTrendChart = () => {
     if (!chartData) return '';
 
     switch (activeAnalysis) {
-      case 'stock-movement':
-        return `Total products analyzed: ${chartData.totalProductsAnalyzed || 0} | Total inventory value: ₹${(chartData.totalInventoryValue || 0).toLocaleString('en-IN')}`;
+      
       case 'category-performance':
         return `Total categories: ${chartData.totalCategoriesAnalyzed || 0} | Total inventory value: ₹${(chartData.totalInventoryValue || 0).toLocaleString('en-IN')}`;
+      case 'stock-movement':
+        return `Total products analyzed: ${chartData.totalProductsAnalyzed || 0} | Total inventory value: ₹${(chartData.totalInventoryValue || 0).toLocaleString('en-IN')}`;
       case 'reorder-patterns':
         return `Average reorder frequency: ${chartData.avgReorderFrequency || 0}/month | Low stock items: ${chartData.currentLowStockItems || 0}`;
       default:

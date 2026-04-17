@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
@@ -21,12 +22,13 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Public routes */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<SignupPage />} />
+    <>
+      <BrowserRouter>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<SignupPage />} />
 
         {/* Protected Dashboard routes */}
         <Route path="/dashboard" element={
@@ -74,6 +76,43 @@ function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
+    <Toaster 
+      position="top-right"
+      reverseOrder={false}
+      gutter={8}
+      toastOptions={{
+        duration: 4000,
+        style: {
+          background: '#363636',
+          color: '#fff',
+          borderRadius: '8px',
+          padding: '12px 20px',
+          fontSize: '14px',
+          fontWeight: '500',
+        },
+        success: {
+          duration: 3000,
+          style: {
+            background: '#10b981',
+          },
+          iconTheme: {
+            primary: '#fff',
+            secondary: '#10b981',
+          },
+        },
+        error: {
+          duration: 4000,
+          style: {
+            background: '#ef4444',
+          },
+          iconTheme: {
+            primary: '#fff',
+            secondary: '#ef4444',
+          },
+        },
+      }}
+    />
+    </>
   );
 }
 

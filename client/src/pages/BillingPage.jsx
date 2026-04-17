@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { MdArrowBack, MdSearch, MdAdd } from 'react-icons/md';
 import Sidebar from '../components/dashboard/Sidebar';
 import Header from '../components/dashboard/Header';
@@ -9,23 +10,18 @@ import PaymentMethod from '../components/billing/PaymentMethod';
 import OrderSummary from '../components/billing/OrderSummary';
 import PaymentSuccess from '../components/billing/PaymentSuccess';
 
+const API_BASE_URL = 'http://localhost:5000';
+
 const BillingPage = () => {
   const navigate = useNavigate();
 
   // States
   const [currentStep, setCurrentStep] = useState('cart'); // cart, customer, payment, confirm, success
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: 'Wireless Keyboard',
-      sku: 'KB-001',
-      category: 'Electronics',
-      price: 2500,
-      quantity: 1,
-    },
-  ]);
+  const [cartItems, setCartItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showProductSearch, setShowProductSearch] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   const [customerData, setCustomerData] = useState({
     type: 'new',
@@ -40,23 +36,41 @@ const BillingPage = () => {
   const [paymentMethod, setPaymentMethod] = useState('online');
   const [isConfirming, setIsConfirming] = useState(false);
 
-  // Dummy products for search
-  const dummyProducts = [
-    { id: 1, name: 'Wireless Keyboard', sku: 'KB-001', category: 'Electronics', price: 2500 },
-    { id: 2, name: 'USB Mouse', sku: 'MS-001', category: 'Electronics', price: 800 },
-    { id: 3, name: 'HDMI Cable', sku: 'AB-001', category: 'Accessories', price: 300 },
-    { id: 4, name: 'Monitor Stand', sku: 'ST-001', category: 'Accessories', price: 1500 },
-    { id: 5, name: 'Webcam HD', sku: 'WC-001', category: 'Electronics', price: 3500 },
-    { id: 6, name: 'USB Hub 7 Port', sku: 'HB-001', category: 'Accessories', price: 1200 },
-  ];
+  // Search products
+  const handleSearch = async (query) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
 
-  // Filtered products based on search
-  const filteredProducts = dummyProducts.filter(
-    (product) =>
-      !cartItems.find((item) => item.id === product.id) &&
-      (product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.sku.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+    setIsSearching(true);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/billing/search?query=${encodeURIComponent(query)}&limit=5`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        // Filter out items already in cart
+        const filtered = data.data.filter(
+          (product) => !cartItems.find((item) => item.productId === product._id)
+        );
+        setSearchResults(filtered);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      toast.error('Failed to search products');
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   // Calculate totals
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -66,25 +80,41 @@ const BillingPage = () => {
 
   // Cart Functions
   const removeFromCart = (itemId) => {
-    setCartItems(cartItems.filter((item) => item.id !== itemId));
+    setCartItems(cartItems.filter((item) => item.productId !== itemId));
   };
 
   const updateQuantity = (itemId, quantity) => {
+    if (quantity <= 0) {
+      removeFromCart(itemId);
+      return;
+    }
     setCartItems(
       cartItems.map((item) =>
-        item.id === itemId ? { ...item, quantity } : item
+        item.productId === itemId ? { ...item, quantity } : item
       )
     );
   };
 
   const addToCart = (product) => {
-    const existingItem = cartItems.find((item) => item.id === product.id);
+    const existingItem = cartItems.find((item) => item.productId === product._id);
     if (existingItem) {
-      updateQuantity(product.id, existingItem.quantity + 1);
+      updateQuantity(product._id, existingItem.quantity + 1);
     } else {
-      setCartItems([...cartItems, { ...product, quantity: 1 }]);
+      setCartItems([
+        ...cartItems,
+        {
+          productId: product._id,
+          name: product.name,
+          sku: product.sku,
+          category: product.category?.name || 'N/A',
+          price: product.price,
+          stock: product.stock,
+          quantity: 1,
+        },
+      ]);
     }
     setSearchQuery('');
+    setSearchResults([]);
     setShowProductSearch(false);
   };
 
@@ -108,7 +138,7 @@ const BillingPage = () => {
     if (isCartValid) {
       setCurrentStep('customer');
     } else {
-      alert('Please add at least one product to cart');
+      toast.error('Please add at least one product to cart');
     }
   };
 
@@ -116,7 +146,7 @@ const BillingPage = () => {
     if (isCustomerValid) {
       setCurrentStep('payment');
     } else {
-      alert('Please fill in required customer information');
+      toast.error('Please fill in required customer information');
     }
   };
 
@@ -127,54 +157,58 @@ const BillingPage = () => {
   const processPayment = async () => {
     setIsConfirming(true);
 
-    // Simulate payment processing
     try {
-      // Dummy API call - replace with actual backend/payment gateway
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const response = await fetch(`${API_BASE_URL}/api/billing/complete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({
+          items: cartItems,
+          customerData,
+          paymentMethod,
+          subtotal,
+          tax: gst,
+          discount: 0,
+          total,
+        }),
+      });
 
-      // Create dummy order
-      const order = {
-        orderId: `ORD-${Date.now()}`,
-        items: cartItems,
-        customer: customerData,
-        subtotal,
-        tax: taxRate,
-        gst,
-        total,
-        paymentMethod,
-        transactionId: `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-        itemsCount: cartItems.reduce((sum, item) => sum + item.quantity, 0),
-      };
+      const data = await response.json();
 
-      // Show success screen
-      setCurrentStep('success');
-      setIsConfirming(false);
-
-      // Store order for display
-      localStorage.setItem('lastOrder', JSON.stringify(order));
+      if (data.success) {
+        toast.success('Order completed successfully!');
+        setCurrentStep('success');
+        localStorage.setItem(
+          'lastOrder',
+          JSON.stringify({
+            ...data.data,
+            itemsCount: cartItems.reduce((sum, item) => sum + item.quantity, 0),
+            subtotal,
+            tax: gst,
+            total,
+          })
+        );
+      } else {
+        toast.error(data.message || 'Failed to complete order');
+      }
     } catch (error) {
-      alert('Payment failed. Please try again.');
+      console.error('Payment error:', error);
+      toast.error('Payment failed. Please try again.');
+    } finally {
       setIsConfirming(false);
     }
   };
 
   // After Success Actions
   const handleDownloadInvoice = () => {
-    alert('Invoice download functionality coming soon!');
+    toast('Invoice download functionality coming soon!');
   };
 
   const handleNewOrder = () => {
     // Reset everything
-    setCartItems([
-      {
-        id: 1,
-        name: 'Wireless Keyboard',
-        sku: 'KB-001',
-        category: 'Electronics',
-        price: 2500,
-        quantity: 1,
-      },
-    ]);
+    setCartItems([]);
     setCustomerData({
       type: 'new',
       name: '',
@@ -277,7 +311,7 @@ const BillingPage = () => {
                       >
                         <span className="flex items-center gap-2">
                           <MdSearch className="text-[18px]" />
-                          {showProductSearch ? 'Hide product list' : 'Scan or search for products'}
+                          {showProductSearch ? 'Hide product list' : 'Search for products'}
                         </span>
                         <MdAdd className="text-[18px]" />
                       </button>
@@ -289,43 +323,56 @@ const BillingPage = () => {
                             type="text"
                             placeholder="Search by name or SKU..."
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={(e) => {
+                              setSearchQuery(e.target.value);
+                              handleSearch(e.target.value);
+                            }}
                             className="w-full h-[40px] px-4 border-b border-[#DEE2E6] text-[14px] focus:outline-none"
                           />
                           <div className="max-h-[300px] overflow-y-auto">
-                            {filteredProducts.length > 0 ? (
-                              filteredProducts.map((product) => (
+                            {isSearching ? (
+                              <div className="p-4 text-center">
+                                <p className="text-[13px] text-[#6C757D]">Searching...</p>
+                              </div>
+                            ) : searchResults.length > 0 ? (
+                              searchResults.map((product) => (
                                 <button
-                                  key={product.id}
+                                  key={product._id}
                                   onClick={() => addToCart(product)}
                                   className="w-full text-left p-3 border-b border-[#E9ECEF] hover:bg-[#F8F9FA] transition-colors"
                                 >
                                   <div className="flex items-center justify-between">
                                     <div>
                                       <p className="text-[13px] font-semibold text-[#212529]">{product.name}</p>
-                                      <p className="text-[11px] text-[#6C757D]">SKU: {product.sku}</p>
+                                      <p className="text-[11px] text-[#6C757D]">SKU: {product.sku} | Stock: {product.stock}</p>
                                     </div>
                                     <p className="text-[13px] font-bold text-[#212529]">₹{product.price}</p>
                                   </div>
                                 </button>
                               ))
-                            ) : (
+                            ) : searchQuery ? (
                               <div className="p-4 text-center">
                                 <p className="text-[13px] text-[#6C757D]">No products found</p>
                               </div>
-                            )}
+                            ) : null}
                           </div>
                         </div>
                       )}
                     </div>
 
                     {/* Cart Items */}
-                    <CartItems
-                      items={cartItems}
-                      onRemoveItem={removeFromCart}
-                      onUpdateQuantity={updateQuantity}
-                      onAddMoreProducts={() => setShowProductSearch(true)}
-                    />
+                    {cartItems.length > 0 ? (
+                      <CartItems
+                        items={cartItems}
+                        onRemoveItem={removeFromCart}
+                        onUpdateQuantity={updateQuantity}
+                        onAddMoreProducts={() => setShowProductSearch(true)}
+                      />
+                    ) : (
+                      <div className="bg-white border border-[#DEE2E6] rounded-lg p-8 text-center">
+                        <p className="text-[14px] text-[#6C757D]">Your cart is empty. Search and add products to continue.</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Next Button */}
@@ -369,6 +416,104 @@ const BillingPage = () => {
                   </div>
                 </div>
               )}
+
+              {/* STEP 3: Payment Method */}
+              {currentStep === 'payment' && (
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-[20px] font-bold text-[#212529] mb-4">Payment Method</h2>
+                    <PaymentMethod
+                      paymentMethod={paymentMethod}
+                      onPaymentMethodChange={setPaymentMethod}
+                    />
+                  </div>
+
+                  {/* Navigation Buttons */}
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => setCurrentStep('customer')}
+                      className="flex-1 h-[44px] border-2 border-[#000000] text-[#000000] rounded-lg text-[14px] font-semibold hover:bg-[#F8F9FA] transition-colors"
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={goToConfirmStep}
+                      className="flex-1 h-[44px] bg-[#000000] text-white rounded-lg text-[14px] font-semibold hover:bg-[#1A1A1A] transition-colors"
+                    >
+                      Review Order
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 4: Order Confirmation */}
+              {currentStep === 'confirm' && (
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-[20px] font-bold text-[#212529] mb-4">Confirm Your Order</h2>
+                    <div className="space-y-4">
+                      <div className="bg-white border border-[#DEE2E6] rounded-lg p-4">
+                        <h3 className="text-[14px] font-semibold text-[#212529] mb-3">Order Items</h3>
+                        <div className="space-y-2">
+                          {cartItems.map((item) => (
+                            <div key={item.productId} className="flex gap-3 pb-3 border-b border-[#E9ECEF]">
+                              <div className="flex-1">
+                                <p className="text-[13px] font-semibold text-[#212529]">{item.name}</p>
+                                <p className="text-[11px] text-[#6C757D]">Qty: {item.quantity}</p>
+                              </div>
+                              <p className="text-[13px] font-bold text-[#212529]">₹{item.price * item.quantity}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-[#DEE2E6] rounded-lg p-4">
+                        <h3 className="text-[14px] font-semibold text-[#212529] mb-3">Customer Details</h3>
+                        <p className="text-[13px] text-[#212529]"><strong>Name:</strong> {customerData.name}</p>
+                        <p className="text-[13px] text-[#212529]"><strong>Phone:</strong> {customerData.phone}</p>
+                        {customerData.email && <p className="text-[13px] text-[#212529]"><strong>Email:</strong> {customerData.email}</p>}
+                        <p className="text-[13px] text-[#212529]"><strong>Payment:</strong> {paymentMethod === 'online' ? 'Online' : 'Cash'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Navigation Buttons */}
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => setCurrentStep('payment')}
+                      className="flex-1 h-[44px] border-2 border-[#000000] text-[#000000] rounded-lg text-[14px] font-semibold hover:bg-[#F8F9FA] transition-colors"
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={processPayment}
+                      disabled={isConfirming}
+                      className="flex-1 h-[44px] bg-[#28A745] text-white rounded-lg text-[14px] font-semibold hover:bg-[#218838] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isConfirming ? 'Processing...' : 'Complete Order'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column - Order Summary */}
+            <div className="col-span-1">
+              <OrderSummary
+                subtotal={subtotal}
+                taxRate={taxRate}
+                tax={gst}
+                total={total}
+              />
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default BillingPage;
 
               {/* STEP 3: Payment Method */}
               {currentStep === 'payment' && (

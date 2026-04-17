@@ -9,16 +9,33 @@ import { AuthService } from '../../api';
 const BillingPage = () => {
   const navigate = useNavigate();
   const skuInputRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   const [cartItems, setCartItems] = useState([]);
   const [skuInput, setSkuInput] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState([]);
+  const [suggestions , setSuggestions] = useState([]);
+  const [showDropDown, setShowDropDown] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
 
   // Auto focus on input
   useEffect(() => {
     skuInputRef.current?.focus();
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target) && 
+          skuInputRef.current && !skuInputRef.current.contains(event.target)) {
+        setShowDropDown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   // Fetch products from API
@@ -37,11 +54,13 @@ const BillingPage = () => {
           }
         );
 
+        console.log('Fetch products response:', response);
         if (response.ok) {
           const data = await response.json();
           setProducts(data.products || []);
         } else {
-          console.error('Failed to fetch products');
+          console.error('Failed to fetch products:', response.statusText);
+          setError('Failed to load products');
         }
       } catch (err) {
         console.error('Error fetching products:', err);
@@ -56,21 +75,102 @@ const BillingPage = () => {
   // Find product by SKU from real database
   const findProductBySKU = (sku) => {
     if (!products || products.length === 0) return null;
-    return products.find(product => product.sku?.toLowerCase() === sku?.toLowerCase());
+    return products.find(
+      product =>
+        product.sku?.toLowerCase() === sku?.toLowerCase()
+    );
   };
 
   // Handle SKU input
   const handleSkuInput = (e) => {
-    const value = e.target.value.trim();
+    const value = e.target.value;
     setSkuInput(value);
     setError('');
+    setHighlightedIndex(0); // Reset to first item
+
+    if (!value.trim()) {
+      setSuggestions([]);
+      setShowDropDown(false);
+      return;
+    }
+
+    const filtered = products
+      .filter((p) =>
+        p.sku?.toLowerCase().includes(value.toLowerCase()) ||
+        p.name?.toLowerCase().includes(value.toLowerCase())
+      )
+      .slice(0, 4);
+
+    setSuggestions(filtered);
+    setShowDropDown(true);
   };
 
-  // Handle Enter key to add product
+  const selectProduct = (product) => {
+    const mappedProduct = {
+      id: product.id,
+      sku: product.sku,
+      name: product.name,
+      price: product.price,
+      stock: product.stock,
+    };
+
+    const existingItem = cartItems.find(
+      (item) => item.id === mappedProduct.id
+    );
+
+    if (existingItem) {
+      setCartItems(
+        cartItems.map((item) =>
+          item.id === mappedProduct.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        )
+      );
+    } else {
+      setCartItems([...cartItems, { ...mappedProduct, quantity: 1 }]);
+    }
+
+    setSkuInput('');
+    setSuggestions([]);
+    setShowDropDown(false);
+    setHighlightedIndex(0);
+    skuInputRef.current?.focus();
+  };
+  // Handle Enter key to add product and Arrow keys for navigation
   const handleAddProduct = (e) => {
+    // Handle Arrow Down - move to next suggestion
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (showDropDown && suggestions.length > 0) {
+        setHighlightedIndex((prev) => 
+          prev < suggestions.length - 1 ? prev + 1 : prev
+        );
+      }
+      return;
+    }
+
+    // Handle Arrow Up - move to previous suggestion
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (showDropDown && suggestions.length > 0) {
+        setHighlightedIndex((prev) => 
+          prev > 0 ? prev - 1 : 0
+        );
+      }
+      return;
+    }
+
+    // Handle Enter key
     if (e.key === 'Enter') {
       e.preventDefault();
 
+      // If dropdown is open and a product is highlighted, select it
+      if (showDropDown && suggestions.length > 0) {
+        selectProduct(suggestions[highlightedIndex]);
+        return;
+      }
+
+      // Otherwise, search by SKU as before
       if (!skuInput.trim()) {
         setError('Please enter a SKU');
         return;
@@ -115,6 +215,9 @@ const BillingPage = () => {
       }
 
       setSkuInput('');
+      setSuggestions([]);
+      setShowDropDown(false);
+      setHighlightedIndex(0);
       setError('');
       skuInputRef.current?.focus();
     }
@@ -192,7 +295,7 @@ const BillingPage = () => {
             {/* LEFT SECTION - Product Scanning + Cart (70%) */}
             <div className="col-span-4 space-y-6">
               {/* SKU Input */}
-              <div className="bg-white rounded-lg border border-[#DEE2E6] p-6">
+              <div className="bg-white rounded-lg border border-[#DEE2E6] p-6 relative">
                 <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6C757D] mb-3">
                   Scan or Enter Product SKU
                 </label>
@@ -206,10 +309,51 @@ const BillingPage = () => {
                   disabled={loading}
                   className="w-full h-[48px] px-4 bg-[#F8F9FA] border-2 border-[#DEE2E6] rounded-lg text-[16px] text-[#212529] placeholder-[#ADB5BD] focus:outline-none focus:border-black focus:bg-white focus:ring-[3px] focus:ring-black/8 transition-all duration-200 disabled:opacity-50"
                 />
+                {/* Suggestions Dropdown */}
+                {showDropDown && suggestions.length > 0 && (
+                <div 
+                  ref={dropdownRef}
+                  className="absolute left-6 right-6 top-[105px] bg-white border border-[#DEE2E6] rounded-lg shadow-xl z-50 overflow-hidden"
+                >
+                  {suggestions.map((product, index) => (
+                    <div
+                      key={product.id}
+                      onClick={() => selectProduct(product)}
+                      className={`px-4 py-3 cursor-pointer border-b last:border-b-0 transition-colors ${
+                        index === highlightedIndex 
+                          ? 'bg-[#007BFF] text-white' 
+                          : 'hover:bg-[#F8F9FA] bg-white'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className={`text-[14px] font-semibold ${
+                            index === highlightedIndex ? 'text-white' : 'text-[#212529]'
+                          }`}>
+                            {product.name}
+                          </p>
+                          <p className={`text-[12px] ${
+                            index === highlightedIndex ? 'text-blue-100' : 'text-[#6C757D]'
+                          }`}>
+                            {product.sku}
+                          </p>
+                        </div>
+
+                        <p className={`text-[13px] font-semibold ${
+                          index === highlightedIndex ? 'text-white' : 'text-[#212529]'
+                        }`}>
+                          ₹{product.price}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
                 {error && (
                   <p className="text-[12px] text-[#DC3545] mt-2">{error}</p>
                 )}
               </div>
+              
 
               {/* Cart Items */}
               <div className="bg-white rounded-lg border border-[#DEE2E6] overflow-hidden">
@@ -267,7 +411,7 @@ const BillingPage = () => {
                               onChange={(e) =>
                                 updateQuantity(item.id, Math.max(1, parseInt(e.target.value) || 1))
                               }
-                              className="w-10 h-8 text-center text-[13px] font-semibold border border-[#DEE2E6] rounded focus:outline-none"
+                              className="w-10 h-8 text-center text-[13px] font-semibold border border-[#DEE2E6] rounded focus:outline-none appearance-none"
                             />
                             <button
                               onClick={() => updateQuantity(item.id, item.quantity + 1)}

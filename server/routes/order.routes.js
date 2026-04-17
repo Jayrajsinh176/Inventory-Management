@@ -17,5 +17,5 @@ router.get('/', protect, getOrders);
 router.get('/:id', protect, getOrderById);
 router.put('/:id', protect, updateOrder);
 router.delete('/:id', protect, deleteOrder);
-
+// router.get('/:id/invoice', protect, getInvoiceByOrderId);
 export default router;

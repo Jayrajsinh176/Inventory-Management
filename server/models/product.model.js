@@ -48,11 +48,9 @@ const productSchema = new mongoose.Schema(
       required : true,
     },
     vendor:{
-      type : String,
-      trim : true,
-      maxlength : 100,
-      required : true,
-      default : 'Unknown Vendor',
+      type : mongoose.Schema.Types.ObjectId,
+      ref : 'Vendor',
+      default : null,
     },
     lowStockThreshold: {
       type: Number,

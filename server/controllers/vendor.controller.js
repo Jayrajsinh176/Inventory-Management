@@ -174,8 +174,8 @@ export const deleteVendor = async (req, res) => {
 
         // Remove vendor reference from products
         await Product.updateMany(
-            { vendor: vendor.name, company: companyId },
-            { vendor: 'Unknown Vendor' }
+            { vendor: vendor._id, company: companyId },
+            { vendor: null }
         );
 
         // Delete the vendor
@@ -213,7 +213,7 @@ export const getVendorProducts = async (req, res) => {
         }
 
         const products = await Product.find({
-            vendor: vendor.name,
+            vendor: vendor._id,
             company: companyId
         }).populate('category');
 
@@ -267,7 +267,7 @@ export const assignProductToVendor = async (req, res) => {
         }
 
         // Update product with vendor
-        product.vendor = vendor.name;
+        product.vendor = vendor._id;
         await product.save();
 
         // Add product to vendor's product list if not already there
@@ -317,7 +317,7 @@ export const removeProductFromVendor = async (req, res) => {
         }
 
         // Update product to remove vendor
-        product.vendor = 'Unknown Vendor';
+        product.vendor = null;
         await product.save();
 
         // Remove product from vendor's product list
@@ -358,12 +358,12 @@ export const getVendorOrders = async (req, res) => {
 
         const orders = await Order.find({ company: companyId }).populate({
             path: 'items.product',
-            match: { vendor: vendor.name }
+            match: { vendor: vendor._id }
         });
 
         // Filter orders that actually contain vendor's products
         const vendorOrders = orders.filter(order =>
-            order.items.some(item => item.product && item.product.vendor === vendor.name)
+            order.items.some(item => item.product && item.product.vendor?.toString() === vendor._id.toString())
         );
 
         res.status(200).json({
@@ -408,7 +408,7 @@ export const getVendorInvoices = async (req, res) => {
 
         // Filter invoices that contain vendor's products
         const vendorInvoices = invoices.filter(invoice =>
-            invoice.order && invoice.order.items.some(item => item.product && item.product.vendor === vendor.name)
+            invoice.order && invoice.order.items.some(item => item.product && item.product.vendor?.toString() === vendor._id.toString())
         );
 
         res.status(200).json({
@@ -448,7 +448,7 @@ export const getVendorAlerts = async (req, res) => {
 
         // Filter alerts for vendor's products
         const vendorAlerts = alerts.filter(alert =>
-            alert.product && alert.product.vendor === vendor.name
+            alert.product && alert.product.vendor?.toString() === vendor._id.toString()
         );
 
         res.status(200).json({
@@ -634,249 +634,6 @@ export const updateSupplyRequestStatus = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to update supply request status'
-        });
-    }
-};
-
-/**
- * @description Get vendor performance stats
- * @route GET /api/vendor/:id/stats
- * @access Private
- */
-export const getVendorStats = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const companyId = new mongoose.Types.ObjectId(req.user.company);
-
-        const vendor = await Vendor.findOne({ _id: id, companyId });
-        if (!vendor) {
-            return res.status(404).json({
-                success: false,
-                message: 'Vendor not found'
-            });
-        }
-
-        const totalProducts = await Product.countDocuments({
-            vendor: vendor.name,
-            company: companyId
-        });
-
-        const supplyRequests = await SupplyRequest.countDocuments({
-            vendorId: id,
-            companyId
-        });
-
-        res.status(200).json({
-            success: true,
-            message: 'Vendor stats fetched successfully.',
-            data: {
-                totalProducts,
-                totalSupplyRequests: supplyRequests,
-            }
-        });
-    } catch (error) {
-        console.log("Get Vendor Stats Error : ", error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch vendor stats'
-        });
-    }
-};
-
-/**
- * @description Get vendor performance metrics
- * @route GET /api/vendor/:id/performance
- * @access Private
- */
-export const getVendorPerformanceMetrics = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const companyId = new mongoose.Types.ObjectId(req.user.company);
-
-        const vendor = await Vendor.findOne({ _id: id, companyId });
-        if (!vendor) {
-            return res.status(404).json({
-                success: false,
-                message: 'Vendor not found'
-            });
-        }
-
-        // Get recent supply requests
-        const recentRequests = await SupplyRequest.find({
-            vendorId: id,
-            companyId,
-            status: 'delivered'
-        }).limit(10).sort({ actualDeliveryDate: -1 });
-
-        // Calculate metrics
-        const totalRequests = await SupplyRequest.countDocuments({
-            vendorId: id,
-            companyId
-        });
-
-        const deliveredRequests = await SupplyRequest.countDocuments({
-            vendorId: id,
-            companyId,
-            status: 'delivered'
-        });
-
-        const metrics = {
-            vendorId: id,
-            vendorName: vendor.name,
-            totalSupplyRequests: totalRequests,
-            deliveredRequests,
-            pendingRequests: totalRequests - deliveredRequests,
-            recentDeliveries: recentRequests,
-        };
-
-        res.status(200).json({
-            success: true,
-            message: 'Vendor performance metrics fetched successfully',
-            data: metrics
-        });
-    } catch (error) {
-        console.log("Get Vendor Performance Metrics Error : ", error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch vendor performance metrics'
-        });
-    }
-};
-
-/**
- * @description Get vendor dashboard
- * @route GET /api/vendor/:id/dashboard
- * @access Private
- */
-export const getVendorDashboard = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const companyId = new mongoose.Types.ObjectId(req.user.company);
-
-        const vendor = await Vendor.findOne({ _id: id, companyId }).populate('products');
-        if (!vendor) {
-            return res.status(404).json({
-                success: false,
-                message: 'Vendor not found'
-            });
-        }
-
-        // Get all metrics
-        const totalProducts = await Product.countDocuments({
-            vendor: vendor.name,
-            company: companyId
-        });
-
-        const totalSupplyRequests = await SupplyRequest.countDocuments({
-            vendorId: id,
-            companyId
-        });
-
-        const pendingSupplyRequests = await SupplyRequest.countDocuments({
-            vendorId: id,
-            companyId,
-            status: { $in: ['pending', 'confirmed', 'shipped'] }
-        });
-
-        const deliveredSupplyRequests = await SupplyRequest.countDocuments({
-            vendorId: id,
-            companyId,
-            status: 'delivered'
-        });
-
-        const recentSupplyRequests = await SupplyRequest.find({
-            vendorId: id,
-            companyId
-        }).sort({ createdAt: -1 }).limit(5);
-
-        const recentDeliveries = await SupplyRequest.find({
-            vendorId: id,
-            companyId,
-            status: 'delivered'
-        }).sort({ actualDeliveryDate: -1 }).limit(5);
-
-        // Get most ordered products
-        const orderedProducts = await Product.find({
-            vendor: vendor.name,
-            company: companyId
-        }).sort({ _id: -1 }).limit(10);
-
-        const dashboard = {
-            vendor: {
-                _id: vendor._id,
-                name: vendor.name,
-                email: vendor.email,
-                phone: vendor.phone,
-                address: vendor.address,
-                status: vendor.status,
-            },
-            metrics: {
-                totalProducts,
-                totalSupplyRequests,
-                pendingRequests: pendingSupplyRequests,
-                deliveredRequests: deliveredSupplyRequests,
-            },
-            recentActivity: {
-                supplyRequests: recentSupplyRequests,
-                deliveries: recentDeliveries,
-            },
-            products: orderedProducts,
-            lastUpdated: vendor.lastPerformanceUpdate || vendor.updatedAt
-        };
-
-        res.status(200).json({
-            success: true,
-            message: 'Vendor dashboard data fetched successfully',
-            data: dashboard
-        });
-    } catch (error) {
-        console.log("Get Vendor Dashboard Error : ", error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch vendor dashboard'
-        });
-    }
-};
-
-/**
- * @description Rate vendor quality
- * @route PUT /api/vendor/:id/rate
- * @access Private
- */
-export const rateVendor = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { rating, notes } = req.body;
-        const companyId = new mongoose.Types.ObjectId(req.user.company);
-
-        if (!rating || rating < 0 || rating > 5) {
-            return res.status(400).json({
-                success: false,
-                message: 'Rating must be between 0 and 5'
-            });
-        }
-
-        const vendor = await Vendor.findOne({ _id: id, companyId });
-        if (!vendor) {
-            return res.status(404).json({
-                success: false,
-                message: 'Vendor not found'
-            });
-        }
-
-        // Note: Rating functionality has been simplified
-        // You can extend this to track ratings separately if needed in future
-
-        res.status(200).json({
-            success: true,
-            message: 'Vendor rating received successfully',
-            data: vendor
-        });
-    } catch (error) {
-        console.log("Rate Vendor Error : ", error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to rate vendor'
         });
     }
 };

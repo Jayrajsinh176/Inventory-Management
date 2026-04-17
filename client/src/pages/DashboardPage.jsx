@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { MdAdd } from 'react-icons/md';
+import toast from 'react-hot-toast';
 import Sidebar from '../components/dashboard/Sidebar';
 import Header from '../components/dashboard/Header';
 import KPICards from '../components/dashboard/KPICards';
@@ -11,8 +12,8 @@ const DashboardPage = () => {
   const navigate = useNavigate();
 
   const handleExportReport = () => {
-    // For now, show an alert. In production, this would generate a PDF/CSV
-    alert('Export functionality coming soon! This will generate a PDF/CSV report of your inventory data.');
+    // For now, show a toast. In production, this would generate a PDF/CSV
+    toast('Export functionality coming soon! This will generate a PDF/CSV report of your inventory data.');
   };
 
   return (

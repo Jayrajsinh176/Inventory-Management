@@ -37,6 +37,7 @@ const buildProductPayload = (product) => ({
   name: product.name,
   sku: product.sku,
   category: buildCategoryPayload(product.category),
+  vendor: product.vendor || null,
   price: product.price,
   stock: product.stock,
   createdAt: product.createdAt,
@@ -104,6 +105,7 @@ export const getProducts = async (req, res) => {
 
     const products = await Product.find(query)
       .populate("category", "name")
+      .populate("vendor", "name")
       .sort({ createdAt: -1 })
       .skip((page-1)*limit)
       .limit(limit)
@@ -136,7 +138,7 @@ export const getProductById = async (req, res) => {
     const product = await Product.findOne({
       _id: req.params.id,
       company: req.user.company,
-    }).populate("category", "name").lean();
+    }).populate("category", "name").populate("vendor", "name").lean();
 
     if (!product) {
       return res.status(404).json({ 
@@ -162,15 +164,15 @@ export const getProductById = async (req, res) => {
  */
 export const createProduct = async (req, res) => {
   try {
-    let { name, sku, category, price, stock ,vendorName } = req.body;
+    let { name, sku, category, price, stock, vendor } = req.body;
 
     name = name?.trim();
     sku = sku?.trim().toUpperCase();
 
-    if (!name || !sku || !category || price === undefined || !vendorName) {
+    if (!name || !sku || !category || price === undefined) {
       return res.status(400).json({
         success : false,
-        message: "Name, SKU, category, price, and vendor name are required",
+        message: "Name, SKU, category, and price are required",
       });
     }
 
@@ -180,6 +182,14 @@ export const createProduct = async (req, res) => {
         message: "Invalid category id" 
       });
     }
+
+    if (vendor && !isValidObjectId(vendor)) {
+      return res.status(400).json({ 
+        success : false,
+        message: "Invalid vendor id" 
+      });
+    }
+
     if (typeof price !== "number") {
       return res.status(400).json({ 
         success : false,
@@ -226,7 +236,7 @@ export const createProduct = async (req, res) => {
       category,
       price,
       stock: stock ?? 0,
-      vendor: vendorName,
+      vendor: vendor || null,
     });
 
     await product.populate("category", "name");
@@ -281,7 +291,7 @@ export const updateProduct = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    const allowedFields = ["name", "sku", "category", "price", "stock"];
+    const allowedFields = ["name", "sku", "category", "price", "stock", "vendor"];
     const updateFields = Object.keys(req.body).filter((field) =>
       allowedFields.includes(field)
     );
@@ -292,7 +302,7 @@ export const updateProduct = async (req, res) => {
       });
     }
 
-    const { name, sku, category, price, stock } = req.body;
+    const { name, sku, category, price, stock, vendor } = req.body;
 
     if (category !== undefined) {
       if (!isValidObjectId(category)) {
@@ -347,6 +357,13 @@ export const updateProduct = async (req, res) => {
       }
 
       product.stock = stock;
+    }
+
+    if (vendor !== undefined) {
+      if (vendor && !isValidObjectId(vendor)) {
+        return res.status(400).json({ message: "Invalid vendor id" });
+      }
+      product.vendor = vendor || null;
     }
 
     await product.save();
