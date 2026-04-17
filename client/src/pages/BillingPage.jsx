@@ -231,9 +231,9 @@ const BillingPage = () => {
     return (
       <div className="flex bg-[#F8F9FA] min-h-screen">
         <Sidebar />
-        <div className="flex-1 ml-[260px]">
+        <div className="flex-1 ml-0 lg:ml-[260px]">
           <Header />
-          <main className="p-8">
+          <main className="p-4 sm:p-6 lg:p-8">
             <PaymentSuccess
               order={JSON.parse(localStorage.getItem('lastOrder') || '{}')}
               onDownloadInvoice={handleDownloadInvoice}
@@ -252,12 +252,12 @@ const BillingPage = () => {
       <Sidebar />
 
       {/* Main Content */}
-      <div className="flex-1 ml-[260px]">
+      <div className="flex-1 ml-0 lg:ml-[260px]">
         {/* Top Header */}
         <Header />
 
         {/* Page Content */}
-        <main className="p-8">
+        <main className="p-4 sm:p-6 lg:p-8">
           {/* Page Header */}
           <div className="mb-8">
             <button
@@ -274,7 +274,7 @@ const BillingPage = () => {
           </div>
 
           {/* Progress Steps */}
-          <div className="mb-8 flex items-center gap-4">
+          <div className="mb-8 flex flex-wrap items-center gap-3 sm:gap-4">
             {['cart', 'customer', 'payment', 'confirm'].map((step, index) => (
               <div key={step} className="flex items-center gap-4">
                 <div
@@ -294,9 +294,9 @@ const BillingPage = () => {
           </div>
 
           {/* Content Area - Two Column Layout */}
-          <div className="grid grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 xl:gap-8">
             {/* Left Column - Main Form */}
-            <div className="col-span-2 space-y-6">
+            <div className="xl:col-span-2 space-y-6">
               {/* STEP 1: Cart */}
               {currentStep === 'cart' && (
                 <div className="space-y-6">
@@ -498,7 +498,7 @@ const BillingPage = () => {
             </div>
 
             {/* Right Column - Order Summary */}
-            <div className="col-span-1">
+            <div className="xl:col-span-1">
               <OrderSummary
                 subtotal={subtotal}
                 taxRate={taxRate}
@@ -506,139 +506,6 @@ const BillingPage = () => {
                 total={total}
               />
             </div>
-          </div>
-        </main>
-      </div>
-    </div>
-  );
-};
-
-export default BillingPage;
-
-              {/* STEP 3: Payment Method */}
-              {currentStep === 'payment' && (
-                <div className="space-y-6">
-                  <div>
-                    <h2 className="text-[20px] font-bold text-[#212529] mb-4">Payment Method</h2>
-                    <PaymentMethod
-                      paymentMethod={paymentMethod}
-                      onPaymentMethodChange={setPaymentMethod}
-                    />
-                  </div>
-
-                  {/* Navigation Buttons */}
-                  <div className="flex gap-4">
-                    <button
-                      onClick={() => setCurrentStep('customer')}
-                      className="flex-1 h-[44px] border-2 border-[#000000] text-[#000000] rounded-lg text-[14px] font-semibold hover:bg-[#F8F9FA] transition-colors"
-                    >
-                      Back
-                    </button>
-                    <button
-                      onClick={goToConfirmStep}
-                      className="flex-1 h-[44px] bg-[#000000] text-white rounded-lg text-[14px] font-semibold hover:bg-[#1A1A1A] transition-colors"
-                    >
-                      Review Order
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* STEP 4: Confirm Order */}
-              {currentStep === 'confirm' && (
-                <div className="space-y-6">
-                  <div>
-                    <h2 className="text-[20px] font-bold text-[#212529] mb-4">Review Your Order</h2>
-
-                    {/* Cart Review */}
-                    <div className="bg-white rounded-lg border border-[#DEE2E6] p-6 mb-4">
-                      <h3 className="text-[14px] font-semibold capitalize mb-4 text-[#212529]">Order Summary</h3>
-                      <CartItems
-                        items={cartItems}
-                        onRemoveItem={removeFromCart}
-                        onUpdateQuantity={updateQuantity}
-                        onAddMoreProducts={() => setCurrentStep('cart')}
-                      />
-                    </div>
-
-                    {/* Customer Review */}
-                    <div className="bg-white rounded-lg border border-[#DEE2E6] p-6 mb-4">
-                      <h3 className="text-[14px] font-semibold mb-3 text-[#212529]">Customer Details</h3>
-                      <div className="space-y-2 text-[13px]">
-                        <div className="flex justify-between">
-                          <span className="text-[#6C757D]">Name:</span>
-                          <span className="font-medium text-[#212529]">
-                            {customerData.type === 'new' ? customerData.name : 'Existing Customer'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-[#6C757D]">Phone:</span>
-                          <span className="font-medium text-[#212529]">
-                            {customerData.phone || customerData.customerId}
-                          </span>
-                        </div>
-                        {customerData.email && (
-                          <div className="flex justify-between">
-                            <span className="text-[#6C757D]">Email:</span>
-                            <span className="font-medium text-[#212529]">{customerData.email}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Payment Method Review */}
-                    <div className="bg-white rounded-lg border border-[#DEE2E6] p-6">
-                      <h3 className="text-[14px] font-semibold mb-3 text-[#212529]">Payment Details</h3>
-                      <div className="flex justify-between text-[13px]">
-                        <span className="text-[#6C757D]">Method:</span>
-                        <span className="font-medium capitalize text-[#212529]">{paymentMethod}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Navigation Buttons */}
-                  <div className="flex gap-4">
-                    <button
-                      onClick={() => setCurrentStep('payment')}
-                      className="flex-1 h-[44px] border-2 border-[#000000] text-[#000000] rounded-lg text-[14px] font-semibold hover:bg-[#F8F9FA] transition-colors"
-                    >
-                      Back
-                    </button>
-                    <button
-                      onClick={processPayment}
-                      disabled={isConfirming}
-                      className="flex-1 h-[44px] bg-[#28A745] text-white rounded-lg text-[14px] font-semibold hover:bg-[#218838] transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {isConfirming ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          Processing...
-                        </>
-                      ) : (
-                        'Confirm & Pay'
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Right Column - Order Summary */}
-            {currentStep !== 'confirm' && (
-              <div>
-                <OrderSummary
-                  items={cartItems}
-                  subtotal={subtotal}
-                  tax={taxRate}
-                  gst={gst}
-                  total={total}
-                  paymentMethod={paymentMethod}
-                  onEditClick={() => setCurrentStep('cart')}
-                  onConfirmClick={processPayment}
-                  isConfirming={isConfirming}
-                />
-              </div>
-            )}
           </div>
         </main>
       </div>

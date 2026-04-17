@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthService } from '../../api';
 import {
@@ -18,6 +19,45 @@ const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = AuthService.getUser();
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  useEffect(() => {
+    const handleToggleSidebar = () => {
+      setIsMobileOpen((isOpen) => !isOpen);
+    };
+
+    const handleCloseSidebar = () => {
+      setIsMobileOpen(false);
+    };
+
+    window.addEventListener('toggle-dashboard-sidebar', handleToggleSidebar);
+    window.addEventListener('close-dashboard-sidebar', handleCloseSidebar);
+
+    return () => {
+      window.removeEventListener('toggle-dashboard-sidebar', handleToggleSidebar);
+      window.removeEventListener('close-dashboard-sidebar', handleCloseSidebar);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isMobileOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+
+    document.body.style.overflow = '';
+  }, [isMobileOpen]);
+
+  useEffect(() => {
+    setIsMobileOpen(false);
+  }, [location.pathname]);
+
+  const navigateTo = (path) => {
+    navigate(path);
+    setIsMobileOpen(false);
+  };
 
   const handleLogout = () => {
     AuthService.clearAuth();
@@ -29,7 +69,17 @@ const Sidebar = () => {
   };
 
   return (
-    <div className="w-[260px] h-screen bg-[#F1F3F5] border-r border-[#DEE2E6] fixed left-0 top-0 flex flex-col">
+    <>
+      {isMobileOpen && (
+        <button
+          type="button"
+          aria-label="Close sidebar"
+          onClick={() => setIsMobileOpen(false)}
+          className="fixed inset-0 bg-black/40 z-30 lg:hidden"
+        />
+      )}
+
+      <div className={`w-[260px] h-[100dvh] bg-[#F1F3F5] border-r border-[#DEE2E6] fixed left-0 top-0 flex flex-col z-40 transform transition-transform duration-300 lg:translate-x-0 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
       {/* Logo Area */}
       <div className="px-4 py-4 border-b border-[#DEE2E6]">
         <h1 className="text-[15.5px] font-bold text-[#212529]">SILENT ARCHITECT</h1>
@@ -42,49 +92,49 @@ const Sidebar = () => {
           label="Dashboard"
           path="/dashboard"
           active={isActive('/dashboard')}
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigateTo('/dashboard')}
         />
         <NavItem
           icon="business"
           label="Vendors"
           path="/vendors"
           active={isActive('/vendors')}
-          onClick={() => navigate('/vendors')}
+          onClick={() => navigateTo('/vendors')}
         />
         <NavItem
           icon="category"
           label="Categories"
           path="/categories"
           active={isActive('/categories')}
-          onClick={() => navigate('/categories')}
+          onClick={() => navigateTo('/categories')}
         />
         <NavItem
           icon="inventory_2"
           label="Products"
           path="/products"
           active={isActive('/products') || isActive('/products/add')}
-          onClick={() => navigate('/products')}
+          onClick={() => navigateTo('/products')}
         />
         <NavItem
           icon="group"
           label="Users"
           path="/users"
           active={isActive('/users')}
-          onClick={() => navigate('/users')}
+          onClick={() => navigateTo('/users')}
         />
         <NavItem
           icon="payments"
           label="Subscription"
           path="/subscription"
           active={isActive('/subscription')}
-          onClick={() => navigate('/subscription')}
+          onClick={() => navigateTo('/subscription')}
         />
         <NavItem
           icon="fact_check"
           label="Billing"
           path="/billing"
           active={isActive('/billing')}
-          onClick={() => navigate('/billing')}
+          onClick={() => navigateTo('/billing')}
         />
         
         {/* Divider */}
@@ -95,14 +145,14 @@ const Sidebar = () => {
           label="Notifications"
           path="/notifications"
           active={isActive('/notifications')}
-          onClick={() => navigate('/notifications')}
+          onClick={() => navigateTo('/notifications')}
         />
         <NavItem
           icon="person"
           label="My Profile"
           path="/profile"
           active={isActive('/profile')}
-          onClick={() => navigate('/profile')}
+          onClick={() => navigateTo('/profile')}
         />
       </nav>
 
@@ -127,7 +177,8 @@ const Sidebar = () => {
           <span className="text-[13px]">Logout</span>
         </button>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

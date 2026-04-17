@@ -103,9 +103,9 @@ const ProfilePage = () => {
     return (
       <div className="flex bg-[#F8F9FA] min-h-screen">
         <Sidebar />
-        <div className="flex-1 ml-[260px]">
+        <div className="flex-1 ml-0 lg:ml-[260px]">
           <Header />
-          <main className="p-8">
+          <main className="p-4 sm:p-6 lg:p-8">
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin">
                 <div className="w-12 h-12 border-4 border-[#DEE2E6] border-t-[#007BFF] rounded-full"></div>
@@ -122,10 +122,10 @@ const ProfilePage = () => {
       <Toaster position="top-right" />
       <Sidebar />
       
-      <div className="flex-1 ml-[260px]">
+      <div className="flex-1 ml-0 lg:ml-[260px]">
         <Header />
         
-        <main className="p-8">
+        <main className="p-4 sm:p-6 lg:p-8">
           {/* Page Header */}
           <div className="mb-8">
             <button
@@ -139,9 +139,9 @@ const ProfilePage = () => {
             <p className="text-[14px] text-[#6C757D]">View and update your personal information</p>
           </div>
 
-          <div className="grid grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
             {/* Profile Form */}
-            <div className="col-span-2">
+            <div className="lg:col-span-2">
               <div className="bg-white rounded-lg border border-[#DEE2E6] shadow-md p-6">
                 <h2 className="text-[18px] font-semibold text-[#212529] mb-6">Personal Information</h2>
                 
@@ -230,7 +230,7 @@ const ProfilePage = () => {
             </div>
 
             {/* Company Info Card */}
-            <div className="col-span-1">
+            <div className="lg:col-span-1">
               <div className="bg-white rounded-lg border border-[#DEE2E6] shadow-md p-6">
                 <h2 className="text-[18px] font-semibold text-[#212529] mb-6">Company Information</h2>
                 

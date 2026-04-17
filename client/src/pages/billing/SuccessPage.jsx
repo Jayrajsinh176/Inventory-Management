@@ -37,7 +37,7 @@ const SuccessPage = () => {
       <Sidebar />
 
       {/* Main Content */}
-      <div className="flex-1 ml-[260px]">
+      <div className="flex-1 ml-0 lg:ml-[260px]">
         {/* Header */}
         <Header />
 

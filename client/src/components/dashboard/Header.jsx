@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MdSearch, MdNotifications, MdPerson, MdLogout, MdSettings } from 'react-icons/md';
+import { MdSearch, MdNotifications, MdPerson, MdLogout, MdMenu } from 'react-icons/md';
 import { AuthService } from '../../api';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -64,23 +64,39 @@ const Header = () => {
     navigate('/');
   };
 
+  const handleSidebarToggle = () => {
+    window.dispatchEvent(new Event('toggle-dashboard-sidebar'));
+  };
+
   return (
-    <div className="h-14 bg-white border-b border-[#DEE2E6] sticky top-0 z-10 flex items-center justify-between px-8">
-      {/* Search Input */}
-      <div className="w-72 relative">
-        <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#6C757D] text-[20px]" />
-        <input
-          type="text"
-          placeholder="Search products..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onKeyDown={handleSearch}
-          className="w-full h-10 bg-[#F8F9FA] border border-[#DEE2E6] rounded-md pl-10 pr-4 text-[14px] text-[#212529] placeholder-[#ADB5BD] focus:outline-none focus:border-[#000000] focus:bg-[#F8F9FA] transition-all duration-150"
-        />
+    <div className="h-14 bg-white border-b border-[#DEE2E6] sticky top-0 z-20 flex items-center justify-between px-4 sm:px-6 lg:px-8 gap-3 sm:gap-4">
+      {/* Left Section */}
+      <div className="flex items-center gap-3 flex-1 max-w-[480px]">
+        <button
+          type="button"
+          onClick={handleSidebarToggle}
+          className="w-9 h-9 rounded-md border border-[#DEE2E6] text-[#495057] flex items-center justify-center hover:bg-[#F8F9FA] transition-colors lg:hidden"
+          aria-label="Open sidebar"
+        >
+          <MdMenu className="text-[22px]" />
+        </button>
+
+        {/* Search Input */}
+        <div className="hidden sm:block w-full relative">
+          <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#6C757D] text-[20px]" />
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleSearch}
+            className="w-full h-10 bg-[#F8F9FA] border border-[#DEE2E6] rounded-md pl-10 pr-4 text-[14px] text-[#212529] placeholder-[#ADB5BD] focus:outline-none focus:border-[#000000] focus:bg-[#F8F9FA] transition-all duration-150"
+          />
+        </div>
       </div>
 
       {/* Right Section */}
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-4 sm:gap-6">
         {/* Notifications */}
         <button 
           onClick={() => navigate('/notifications')}

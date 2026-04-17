@@ -140,10 +140,10 @@ const NotificationsPage = () => {
       <Toaster position="top-right" />
       <Sidebar />
       
-      <div className="flex-1 ml-[260px]">
+      <div className="flex-1 ml-0 lg:ml-[260px]">
         <Header />
         
-        <main className="p-8">
+        <main className="p-4 sm:p-6 lg:p-8">
           {/* Page Header */}
           <div className="mb-8">
             <button

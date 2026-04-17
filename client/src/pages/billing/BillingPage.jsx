@@ -269,12 +269,12 @@ const BillingPage = () => {
       <Sidebar />
 
       {/* Main Content */}
-      <div className="flex-1 ml-[260px]">
+      <div className="flex-1 ml-0 lg:ml-[260px]">
         {/* Header */}
         <Header />
 
         {/* Page Content */}
-        <main className="p-8">
+        <main className="p-4 sm:p-6 lg:p-8">
           {/* Page Header */}
           <div className="mb-8">
             <button
@@ -291,9 +291,9 @@ const BillingPage = () => {
           </div>
 
           {/* Main Layout - Left (70%) and Right (30%) */}
-          <div className="grid grid-cols-6 gap-8">
+          <div className="grid grid-cols-1 xl:grid-cols-6 gap-6 xl:gap-8">
             {/* LEFT SECTION - Product Scanning + Cart (70%) */}
-            <div className="col-span-4 space-y-6">
+            <div className="xl:col-span-4 space-y-6">
               {/* SKU Input */}
               <div className="bg-white rounded-lg border border-[#DEE2E6] p-6 relative">
                 <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6C757D] mb-3">
@@ -447,7 +447,7 @@ const BillingPage = () => {
             </div>
 
             {/* RIGHT SECTION - Order Summary (30%) */}
-            <div className="col-span-2">
+            <div className="xl:col-span-2">
               <div className="bg-white rounded-lg border border-[#DEE2E6] overflow-hidden sticky top-24">
                 <div className="px-6 py-4 bg-[#F8F9FA] border-b border-[#DEE2E6]">
                   <h2 className="text-[16px] font-semibold text-[#212529]">Order Summary</h2>

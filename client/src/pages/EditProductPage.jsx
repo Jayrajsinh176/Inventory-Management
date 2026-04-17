@@ -45,12 +45,12 @@ const EditProductPage = () => {
       <Sidebar />
 
       {/* Main Content */}
-      <div className="flex-1 ml-[260px]">
+      <div className="flex-1 ml-0 lg:ml-[260px]">
         {/* Top Header */}
         <Header />
 
         {/* Page Content */}
-        <main className="p-8">
+        <main className="p-4 sm:p-6 lg:p-8">
           {/* Breadcrumb Navigation */}
           <div className="flex items-center gap-2 text-[12px] text-[#6C757D] mb-6">
             <span>Products</span>

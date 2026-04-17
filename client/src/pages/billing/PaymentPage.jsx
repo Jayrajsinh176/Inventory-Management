@@ -36,12 +36,12 @@ const PaymentPage = () => {
       <Sidebar />
 
       {/* Main Content */}
-      <div className="flex-1 ml-[260px]">
+      <div className="flex-1 ml-0 lg:ml-[260px]">
         {/* Header */}
         <Header />
 
         {/* Page Content */}
-        <main className="p-8">
+        <main className="p-4 sm:p-6 lg:p-8">
           {/* Page Header */}
           <div className="mb-8">
             <button
@@ -58,9 +58,9 @@ const PaymentPage = () => {
           </div>
 
           {/* Main Layout */}
-          <div className="grid grid-cols-6 gap-8 max-w-[1000px]">
+          <div className="grid grid-cols-1 xl:grid-cols-6 gap-6 xl:gap-8 max-w-[1000px]">
             {/* Payment Options */}
-            <div className="col-span-4 space-y-4">
+            <div className="xl:col-span-4 space-y-4">
               {/* Online Payment */}
               <div
                 onClick={() => setSelectedMethod(PAYMENT_METHODS.ONLINE)}
@@ -135,7 +135,7 @@ const PaymentPage = () => {
             </div>
 
             {/* Order Summary */}
-            <div className="col-span-2">
+            <div className="xl:col-span-2">
               <div className="bg-white rounded-lg border border-[#DEE2E6] p-6 sticky top-24">
                 <h3 className="text-[14px] font-semibold text-[#212529] mb-4">Order Total</h3>
 
