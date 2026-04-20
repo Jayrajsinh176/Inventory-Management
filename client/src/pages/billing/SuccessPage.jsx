@@ -133,8 +133,8 @@ const SuccessPage = () => {
             </div>
 
             {/* Info Box */}
-            <div className="p-4 bg-[#E7F1FF] border border-[#92CDFF] rounded-lg mb-6">
-              <p className="text-[12px] text-[#004085]">
+            <div className="p-4 bg-[#F8F9FA] border border-[#DEE2E6] rounded-lg mb-6">
+              <p className="text-[12px] text-[#212529]">
                 ✓ Order confirmation has been generated. Your receipt is ready for download.
               </p>
             </div>

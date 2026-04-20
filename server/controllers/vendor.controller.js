@@ -5,6 +5,9 @@ import Order from '../models/order.model.js';
 import Invoice from '../models/invoice.model.js';
 import Alert from '../models/alert.model.js';
 import SupplyRequest from '../models/supplyRequest.model.js';
+import { sendEmail } from '../utils/email.js';
+
+const buildSupplyRequestPaymentRoute = (vendorId, requestId) => `/vendors/${vendorId}/supply-requests/${requestId}/payment`;
 
 /**
  * @description Create a new vendor
@@ -474,7 +477,17 @@ export const getVendorAlerts = async (req, res) => {
 export const createSupplyRequest = async (req, res) => {
     try {
         const { id } = req.params;
-        const { productId, quantity, expectedDeliveryDate, quotedPrice, notes } = req.body;
+        const {
+            productId,
+            quantity,
+            expectedDeliveryDate,
+            quotedPrice,
+            notes,
+            shopName,
+            ownerName,
+            ownerEmail,
+            ownerPhone,
+        } = req.body;
         const companyId = new mongoose.Types.ObjectId(req.user.company);
         const userId = req.user._id;
 
@@ -503,6 +516,7 @@ export const createSupplyRequest = async (req, res) => {
 
         // Generate unique request number
         const requestNumber = `SR-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const totalAmount = Number(quotedPrice) * Number(quantity);
 
         const supplyRequest = new SupplyRequest({
             companyId,
@@ -512,7 +526,12 @@ export const createSupplyRequest = async (req, res) => {
             quantity,
             expectedDeliveryDate: new Date(expectedDeliveryDate),
             quotedPrice,
+            totalAmount,
             notes,
+            shopName: shopName || '',
+            ownerName: ownerName || req.user.name || '',
+            ownerEmail: ownerEmail || req.user.email || '',
+            ownerPhone: ownerPhone || req.user.phone || '',
             createdBy: userId,
         });
 
@@ -521,6 +540,15 @@ export const createSupplyRequest = async (req, res) => {
         // Update vendor's total supply requests
         vendor.totalSupplyRequests = (vendor.totalSupplyRequests || 0) + 1;
         await vendor.save();
+
+        // Send vendor notification (email for now until vendor panel is available)
+        if (vendor.email) {
+            await sendEmail({
+                to: vendor.email,
+                subject: `New Stock Request ${requestNumber}`,
+                text: `Hello ${vendor.name},\n\nYou have a new stock request from ${supplyRequest.shopName || 'a shop'} (${supplyRequest.ownerName || 'Owner'}).\n\nProduct: ${product.name} (${product.sku})\nQuantity: ${quantity}\nExpected Delivery: ${new Date(expectedDeliveryDate).toLocaleDateString()}\nAmount: ₹${totalAmount.toFixed(2)}\n\nPlease prepare and confirm dispatch.\n`,
+            });
+        }
 
         res.status(201).json({
             success: true,
@@ -588,7 +616,7 @@ export const getSupplyRequests = async (req, res) => {
 export const updateSupplyRequestStatus = async (req, res) => {
     try {
         const { id, requestId } = req.params;
-        const { status, actualDeliveryDate } = req.body;
+        const { status, actualDeliveryDate, vendorResponseNotes } = req.body;
         const companyId = new mongoose.Types.ObjectId(req.user.company);
 
         if (!status) {
@@ -615,6 +643,9 @@ export const updateSupplyRequestStatus = async (req, res) => {
         }
 
         supplyRequest.status = status;
+        if (vendorResponseNotes) {
+            supplyRequest.vendorResponseNotes = vendorResponseNotes;
+        }
 
         // If delivered, update the delivery date
         if (status === 'delivered' && actualDeliveryDate) {
@@ -623,6 +654,32 @@ export const updateSupplyRequestStatus = async (req, res) => {
         }
 
         await supplyRequest.save();
+
+        // Notify admin when vendor marks request as ready/shipped
+        if (status === 'confirmed' || status === 'shipped') {
+            const product = await Product.findById(supplyRequest.productId).select('name sku');
+
+            await Alert.create({
+                company: companyId,
+                type: 'vendor_order_ready',
+                severity: 'high',
+                message: `Vendor ${vendor.name} marked request ${supplyRequest.requestNumber} as ${status}. Payment is pending.`,
+                metadata: {
+                    vendorId: vendor._id,
+                    vendorName: vendor.name,
+                    requestId: supplyRequest._id,
+                    requestNumber: supplyRequest.requestNumber,
+                    productId: product?._id || null,
+                    productName: product?.name || 'N/A',
+                    productSku: product?.sku || 'N/A',
+                    quantity: supplyRequest.quantity,
+                    totalAmount: supplyRequest.totalAmount || (supplyRequest.quotedPrice * supplyRequest.quantity),
+                    shopName: supplyRequest.shopName,
+                    ownerName: supplyRequest.ownerName,
+                    paymentRoute: buildSupplyRequestPaymentRoute(vendor._id, supplyRequest._id),
+                },
+            });
+        }
 
         res.status(200).json({
             success: true,
@@ -634,6 +691,140 @@ export const updateSupplyRequestStatus = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to update supply request status'
+        });
+    }
+};
+
+/**
+ * @description Get single supply request details
+ * @route GET /api/vendor/:id/supply-requests/:requestId
+ * @access Private
+ */
+export const getSupplyRequestById = async (req, res) => {
+    try {
+        const { id, requestId } = req.params;
+        const companyId = new mongoose.Types.ObjectId(req.user.company);
+
+        const vendor = await Vendor.findOne({ _id: id, companyId });
+        if (!vendor) {
+            return res.status(404).json({
+                success: false,
+                message: 'Vendor not found'
+            });
+        }
+
+        const supplyRequest = await SupplyRequest.findOne({ _id: requestId, vendorId: id, companyId })
+            .populate('productId')
+            .populate('createdBy', 'name email');
+
+        if (!supplyRequest) {
+            return res.status(404).json({
+                success: false,
+                message: 'Supply request not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Supply request fetched successfully',
+            data: supplyRequest
+        });
+    } catch (error) {
+        console.log('Get Supply Request By ID Error : ', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch supply request details'
+        });
+    }
+};
+
+/**
+ * @description Mark supply request as paid and notify vendor/admin
+ * @route POST /api/vendor/:id/supply-requests/:requestId/pay
+ * @access Private
+ */
+export const paySupplyRequest = async (req, res) => {
+    try {
+        const { id, requestId } = req.params;
+        const { paymentMethod = 'online', paymentReference = '' } = req.body;
+        const companyId = new mongoose.Types.ObjectId(req.user.company);
+
+        const vendor = await Vendor.findOne({ _id: id, companyId });
+        if (!vendor) {
+            return res.status(404).json({
+                success: false,
+                message: 'Vendor not found'
+            });
+        }
+
+        const supplyRequest = await SupplyRequest.findOne({ _id: requestId, vendorId: id, companyId })
+            .populate('productId');
+
+        if (!supplyRequest) {
+            return res.status(404).json({
+                success: false,
+                message: 'Supply request not found'
+            });
+        }
+
+        if (supplyRequest.paymentStatus === 'paid') {
+            return res.status(400).json({
+                success: false,
+                message: 'Supply request is already paid'
+            });
+        }
+
+        const invoiceNumber = `VINV-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+
+        supplyRequest.paymentStatus = 'paid';
+        supplyRequest.paymentMethod = paymentMethod;
+        supplyRequest.paymentReference = paymentReference;
+        supplyRequest.paidAt = new Date();
+        supplyRequest.invoiceNumber = invoiceNumber;
+        if (supplyRequest.status !== 'delivered') {
+            supplyRequest.status = 'delivered';
+        }
+
+        await supplyRequest.save();
+
+        await Alert.create({
+            company: companyId,
+            type: 'vendor_payment_completed',
+            severity: 'low',
+            message: `Payment completed for vendor request ${supplyRequest.requestNumber}.`,
+            metadata: {
+                vendorId: vendor._id,
+                vendorName: vendor.name,
+                requestId: supplyRequest._id,
+                requestNumber: supplyRequest.requestNumber,
+                invoiceNumber,
+                totalAmount: supplyRequest.totalAmount,
+                paymentMethod,
+                paidAt: supplyRequest.paidAt,
+            },
+        });
+
+        if (vendor.email) {
+            await sendEmail({
+                to: vendor.email,
+                subject: `Payment Confirmation - ${supplyRequest.requestNumber}`,
+                text: `Hello ${vendor.name},\n\nPayment has been completed for your request ${supplyRequest.requestNumber}.\nInvoice: ${invoiceNumber}\nAmount: ₹${Number(supplyRequest.totalAmount || 0).toFixed(2)}\nMethod: ${paymentMethod}\n\nThank you.`,
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Supply request payment completed successfully',
+            data: {
+                supplyRequest,
+                invoiceNumber,
+            }
+        });
+    } catch (error) {
+        console.log('Pay Supply Request Error : ', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to complete payment for supply request'
         });
     }
 };

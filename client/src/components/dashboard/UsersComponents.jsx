@@ -153,9 +153,9 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
       };
     }
     return {
-      bg: '#E7F1FF',
-      text: '#004085',
-      border: '1px solid #B8DAFF',
+      bg: '#F1F3F5',
+      text: '#212529',
+      border: '1px solid #DEE2E6',
     };
   };
 
@@ -383,7 +383,7 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
                       {/* Name with Avatar */}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-[#007BFF] flex items-center justify-center text-white text-[12px] font-bold shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-[#000000] flex items-center justify-center text-white text-[12px] font-bold shrink-0">
                             {getInitials(user.name)}
                           </div>
                           <div>
@@ -428,7 +428,7 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
                         <div className="flex items-center justify-end gap-2">
                           <button 
                             onClick={() => handleEditUser(user._id || user.id)}
-                            className="text-black hover:text-[#0056b3] transition-colors"
+                            className="text-black hover:text-[#343A40] transition-colors"
                           >
                             <MdEdit className="text-[20px]" />
                           </button>

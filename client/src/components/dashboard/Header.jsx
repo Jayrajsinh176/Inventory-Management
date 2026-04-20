@@ -117,7 +117,7 @@ const Header = () => {
             onClick={() => setShowUserMenu(!showUserMenu)}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
-            <div className="w-8 h-8 bg-[#007BFF] rounded-full flex items-center justify-center text-white text-[12px] font-bold border-2 border-[#DEE2E6]">
+            <div className="w-8 h-8 bg-[#000000] rounded-full flex items-center justify-center text-white text-[12px] font-bold border-2 border-[#DEE2E6]">
               {userInitials}
             </div>
           </button>

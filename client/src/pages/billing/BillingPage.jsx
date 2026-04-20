@@ -279,7 +279,7 @@ const BillingPage = () => {
           <div className="mb-8">
             <button
               onClick={() => navigate('/dashboard')}
-              className="flex items-center gap-2 text-[#007BFF] hover:text-[#0056b3] text-[14px] font-semibold mb-4 transition-colors"
+              className="flex items-center gap-2 text-[#212529] hover:text-[#000000] text-[14px] font-semibold mb-4 transition-colors"
             >
               <MdArrowBack className="text-[18px]" />
               Back to Dashboard
@@ -321,7 +321,7 @@ const BillingPage = () => {
                       onClick={() => selectProduct(product)}
                       className={`px-4 py-3 cursor-pointer border-b last:border-b-0 transition-colors ${
                         index === highlightedIndex 
-                          ? 'bg-[#007BFF] text-white' 
+                          ? 'bg-[#000000] text-white' 
                           : 'hover:bg-[#F8F9FA] bg-white'
                       }`}
                     >
@@ -333,7 +333,7 @@ const BillingPage = () => {
                             {product.name}
                           </p>
                           <p className={`text-[12px] ${
-                            index === highlightedIndex ? 'text-blue-100' : 'text-[#6C757D]'
+                            index === highlightedIndex ? 'text-[#E9ECEF]' : 'text-[#6C757D]'
                           }`}>
                             {product.sku}
                           </p>

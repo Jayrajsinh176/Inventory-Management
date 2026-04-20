@@ -159,7 +159,7 @@ const Sidebar = () => {
       {/* User Info + Logout (bottom) */}
       <div className="px-4 py-4 border-t border-[#DEE2E6] space-y-4">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-[#007BFF] rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+          <div className="w-8 h-8 bg-[#000000] rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
             {user?.name?.charAt(0).toUpperCase() || 'U'}
           </div>
           <div className="flex-1 min-w-0">

@@ -7,7 +7,8 @@ import {
   MdCheckCircle,
   MdArrowBack,
   MdDoneAll,
-  MdRefresh
+  MdRefresh,
+  MdPayments
 } from 'react-icons/md';
 import Sidebar from '../components/dashboard/Sidebar';
 import Header from '../components/dashboard/Header';
@@ -104,7 +105,9 @@ const NotificationsPage = () => {
       case 'out_of_stock':
         return <MdInventory2 className="text-[24px] text-[#DC3545]" />;
       case 'reorder_reminder':
-        return <MdRefresh className="text-[24px] text-[#007BFF]" />;
+        return <MdRefresh className="text-[24px] text-[#000000]" />;
+      case 'vendor_order_ready':
+        return <MdPayments className="text-[24px] text-[#000000]" />;
       default:
         return <MdNotifications className="text-[24px] text-[#6C757D]" />;
     }
@@ -115,7 +118,7 @@ const NotificationsPage = () => {
     if (severity === 'high') return 'border-l-[#FFC107]';
     if (type === 'low_stock') return 'border-l-[#FFC107]';
     if (type === 'out_of_stock') return 'border-l-[#DC3545]';
-    return 'border-l-[#007BFF]';
+    return 'border-l-[#000000]';
   };
 
   const formatDate = (dateString) => {
@@ -133,6 +136,13 @@ const NotificationsPage = () => {
       day: 'numeric',
       year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
     });
+  };
+
+  const getActionRoute = (notification) => {
+    if (notification?.type === 'vendor_order_ready' && notification?.metadata?.paymentRoute) {
+      return notification.metadata.paymentRoute;
+    }
+    return null;
   };
 
   return (
@@ -166,7 +176,7 @@ const NotificationsPage = () => {
               {notifications.length > 0 && unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
-                  className="flex items-center gap-2 px-4 py-2 text-[14px] font-medium text-[#007BFF] hover:bg-[#E7F3FF] rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 text-[14px] font-medium text-[#000000] hover:bg-[#F1F3F5] rounded-lg transition-colors"
                 >
                   <MdDoneAll className="text-[18px]" />
                   Mark all as read
@@ -180,7 +190,7 @@ const NotificationsPage = () => {
             {loading ? (
               <div className="flex justify-center items-center py-16">
                 <div className="animate-spin">
-                  <div className="w-12 h-12 border-4 border-[#DEE2E6] border-t-[#007BFF] rounded-full"></div>
+                  <div className="w-12 h-12 border-4 border-[#DEE2E6] border-t-[#000000] rounded-full"></div>
                 </div>
               </div>
             ) : notifications.length === 0 ? (
@@ -195,7 +205,10 @@ const NotificationsPage = () => {
               </div>
             ) : (
               <div className="divide-y divide-[#DEE2E6]">
-                {notifications.map((notification) => (
+                {notifications.map((notification) => {
+                  const actionRoute = getActionRoute(notification);
+
+                  return (
                   <div
                     key={notification._id}
                     className={`flex items-start gap-4 p-6 border-l-4 ${getNotificationColor(notification.type, notification.severity)} ${
@@ -221,9 +234,18 @@ const NotificationsPage = () => {
                             </p>
                           )}
                           {notification.metadata && (
-                            <p className="text-[12px] text-[#6C757D] mt-1">
-                              Current Stock: {notification.metadata.currentStock} | Threshold: {notification.metadata.threshold}
-                            </p>
+                            <>
+                              {(notification.metadata.currentStock !== undefined || notification.metadata.threshold !== undefined) && (
+                                <p className="text-[12px] text-[#6C757D] mt-1">
+                                  Current Stock: {notification.metadata.currentStock} | Threshold: {notification.metadata.threshold}
+                                </p>
+                              )}
+                              {notification.type === 'vendor_order_ready' && (
+                                <p className="text-[12px] text-[#6C757D] mt-1">
+                                  Request: {notification.metadata.requestNumber} | Vendor: {notification.metadata.vendorName} | Amount: ₹{Number(notification.metadata.totalAmount || 0).toFixed(2)}
+                                </p>
+                              )}
+                            </>
                           )}
                         </div>
                         <div className="flex-shrink-0 text-right">
@@ -231,21 +253,33 @@ const NotificationsPage = () => {
                             {formatDate(notification.createdAt)}
                           </p>
                           {!notification.isRead && (
-                            <span className="inline-block w-2 h-2 bg-[#007BFF] rounded-full mt-2"></span>
+                            <span className="inline-block w-2 h-2 bg-[#000000] rounded-full mt-2"></span>
+                          )}
+                          {actionRoute && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(actionRoute, { state: { notification } });
+                              }}
+                              className="mt-3 px-3 py-1.5 text-[12px] font-semibold bg-[#000000] text-white rounded hover:bg-[#1A1A1A]"
+                            >
+                              Pay Now
+                            </button>
                           )}
                         </div>
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })} 
               </div>
             )}
           </div>
 
           {/* Info Card */}
-          <div className="mt-8 bg-[#E7F3FF] border border-[#B6D4FE] rounded-lg p-6">
-            <h3 className="text-[16px] font-semibold text-[#0D6EFD] mb-2">About Notifications</h3>
-            <p className="text-[14px] text-[#0D6EFD]">
+          <div className="mt-8 bg-[#F8F9FA] border border-[#DEE2E6] rounded-lg p-6">
+            <h3 className="text-[16px] font-semibold text-[#212529] mb-2">About Notifications</h3>
+            <p className="text-[14px] text-[#6C757D]">
               Notifications are automatically generated when products reach low stock thresholds or run out of stock. 
               Configure your alert preferences to customize which notifications you receive.
             </p>

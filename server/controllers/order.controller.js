@@ -18,7 +18,7 @@ export const createOrder = async (req, res) => {
             discount = 0,
             total,
             paymentMethod,
-            paymentStatus = 'pending',
+            paymentStatus,
             transactionId,
             customerName,
             customerEmail,
@@ -32,49 +32,76 @@ export const createOrder = async (req, res) => {
         if (!paymentMethod) {
             return res.status(400).json({ message: "Payment method is required" });
         }
-        if (!customerName || !customerPhone) {
-            return res.status(400).json({ message: "Customer name and phone are required" });
+
+        const normalizedItems = items.map((item) => ({
+            product: item.product || item.productId || item.id,
+            productName: item.productName || item.name,
+            productSku: item.productSku || item.sku,
+            quantity: Number(item.quantity || 0),
+            unitPrice: Number(item.unitPrice ?? item.price ?? 0),
+            subtotal: Number(item.subtotal ?? (Number(item.quantity || 0) * Number(item.unitPrice ?? item.price ?? 0))),
+        }));
+
+        const hasInvalidItem = normalizedItems.some(
+            (item) => !mongoose.Types.ObjectId.isValid(item.product) || item.quantity <= 0 || item.unitPrice < 0
+        );
+
+        if (hasInvalidItem) {
+            return res.status(400).json({ message: "One or more order items are invalid" });
         }
+
+        const resolvedPaymentStatus = paymentStatus || 'paid';
+        const allowedPaymentStatuses = ['pending', 'paid', 'failed', 'refunded'];
+        if (!allowedPaymentStatuses.includes(resolvedPaymentStatus)) {
+            return res.status(400).json({
+                message: `Invalid payment status. Must be one of: ${allowedPaymentStatuses.join(', ')}`,
+            });
+        }
+
         const orderCount = await Order.countDocuments({ company: req.user.company });
         const orderNumber = `ORD-${Date.now()}-${orderCount + 1}`;
-        for (const item of items) {
+
+        for (const item of normalizedItems) {
             const product = await Product.findById(item.product);
             if (!product) {
                 return res.status(404).json({ message: `Product ${item.product} not found` });
             }
-            if (product.quantity < item.quantity) {
+            if (product.stock < item.quantity) {
                 return res.status(400).json({ 
-                    message: `Insufficient stock for ${product.name}. Available: ${product.quantity}, Requested: ${item.quantity}` 
+                    message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}` 
                 });
             }
         }
+
         const order = new Order({
             company: req.user.company,
             user: req.user._id,
             orderNumber,
-            items,
+            items: normalizedItems,
             subtotal,
             tax,
             discount,
             total,
             paymentMethod,
-            paymentStatus,
+            paymentStatus: resolvedPaymentStatus,
             transactionId,
-            customerName,
+            customerName: customerName || 'Walk-in Customer',
             customerEmail,
             customerPhone,
             notes,
-            status: 'pending'
+            status: resolvedPaymentStatus === 'paid' ? 'completed' : 'pending'
         });
+
         order.statusHistory.push({
-            status: 'pending',
+            status: order.status,
             changedAt: new Date(),
             reason: 'Order created'
         });
         await order.save();
-        for (const item of items) {
+
+        for (const item of normalizedItems) {
             const product = await Product.findById(item.product);
-            product.quantity -= item.quantity;
+            product.stock -= item.quantity;
             order.stockAdjustments.push({
                 productId: item.product,
                 quantity: item.quantity,
@@ -84,7 +111,7 @@ export const createOrder = async (req, res) => {
         }
 
         let invoice = null;
-        if (paymentStatus === 'paid' || paymentMethod === 'online') {
+        if (resolvedPaymentStatus === 'paid' || paymentMethod === 'online') {
             const invoiceCount = await Invoice.countDocuments({ company: req.user.company });
             const invoiceNumber = `INV-${Date.now()}-${invoiceCount + 1}`;
 
@@ -97,12 +124,12 @@ export const createOrder = async (req, res) => {
                 tax,
                 discount,
                 amount: total,
-                status: paymentStatus === 'paid' ? 'paid' : 'unpaid',
+                status: resolvedPaymentStatus === 'paid' ? 'paid' : 'unpaid',
                 paymentMethod,
                 transactionId,
                 issueDate: new Date(),
                 dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-                paidDate: paymentStatus === 'paid' ? new Date() : null,
+                paidDate: resolvedPaymentStatus === 'paid' ? new Date() : null,
             });
 
             await invoice.save();
@@ -111,6 +138,7 @@ export const createOrder = async (req, res) => {
         }
 
         res.status(201).json({
+            success: true,
             message: "Order created successfully",
             order: await order.populate([
                 { path: 'company' },
@@ -333,7 +361,7 @@ export const deleteOrder = async (req, res) => {
         for (const item of order.items) {
             const product = await Product.findById(item.product);
             if (product) {
-                product.quantity += item.quantity;
+                product.stock += item.quantity;
                 await product.save();
             }
         }

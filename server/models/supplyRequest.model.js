@@ -43,10 +43,64 @@ const supplyRequestSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    shopName: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    ownerName: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    ownerEmail: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    ownerPhone: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    vendorResponseNotes: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     quotedPrice: {
       type: Number,
       required: true,
       min: 0,
+    },
+    totalAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['unpaid', 'paid'],
+      default: 'unpaid',
+    },
+    paidAt: {
+      type: Date,
+      default: null,
+    },
+    paymentMethod: {
+      type: String,
+      enum: ['online', 'cash', 'bank_transfer', 'upi', 'other'],
+      default: 'online',
+    },
+    paymentReference: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    invoiceNumber: {
+      type: String,
+      trim: true,
+      default: '',
     },
     isOnTime: {
       type: Boolean,

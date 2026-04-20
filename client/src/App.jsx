@@ -14,6 +14,7 @@ import EditUserPage from './pages/EditUserPage';
 import ProfilePage from './pages/ProfilePage';
 import NotificationsPage from './pages/NotificationsPage';
 import VendorsPage from './pages/VendorsPage';
+import VendorSupplyPaymentPage from './pages/VendorSupplyPaymentPage';
 import BillingPage from './pages/billing/BillingPage';
 import PaymentPage from './pages/billing/PaymentPage';
 import ReviewPage from './pages/billing/ReviewPage';
@@ -70,6 +71,9 @@ function App() {
         } />
         <Route path="/notifications" element={
           <ProtectedRoute><NotificationsPage /></ProtectedRoute>
+        } />
+        <Route path="/vendors/:vendorId/supply-requests/:requestId/payment" element={
+          <ProtectedRoute><VendorSupplyPaymentPage /></ProtectedRoute>
         } />
 
         {/* Fallback */}

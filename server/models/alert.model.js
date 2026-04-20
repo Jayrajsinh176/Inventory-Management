@@ -11,12 +11,21 @@ const alertSchema = new mongoose.Schema(
     product: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Product",
-      required: true,
+      required: false,
+      default: null,
     },
     type: {
       type: String,
       required: true,
-      enum: ["low_stock", "out_of_stock", "reorder_reminder", "price_change"],
+      enum: [
+        "low_stock",
+        "out_of_stock",
+        "reorder_reminder",
+        "price_change",
+        "vendor_order_request",
+        "vendor_order_ready",
+        "vendor_payment_completed"
+      ],
       default: "low_stock",
     },
     message: {
@@ -46,10 +55,8 @@ const alertSchema = new mongoose.Schema(
       default: null,
     },
     metadata: {
-      currentStock: Number,
-      threshold: Number,
-      previousValue: Number,
-      newValue: Number,
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
     },
   },
   {

@@ -15,7 +15,9 @@ import {
     getVendorAlerts,
     createSupplyRequest,
     getSupplyRequests,
+    getSupplyRequestById,
     updateSupplyRequestStatus,
+    paySupplyRequest,
 } from '../controllers/vendor.controller.js';
 import { protect } from '../middleware/auth.middleware.js';
 
@@ -39,7 +41,9 @@ router.get('/:id/alerts', protect, getVendorAlerts);
 // Supply Request endpoints
 router.post('/:id/supply-requests', protect, createSupplyRequest);
 router.get('/:id/supply-requests', protect, getSupplyRequests);
+router.get('/:id/supply-requests/:requestId', protect, getSupplyRequestById);
 router.put('/:id/supply-requests/:requestId', protect, updateSupplyRequestStatus);
+router.post('/:id/supply-requests/:requestId/pay', protect, paySupplyRequest);
 
 
 export default router;

@@ -27,8 +27,8 @@
   /* --- Primary / Action Colors --- */
   --color-primary: #000000;
   --color-primary-hover: #1A1A1A;
-  --color-accent: #007BFF;
-  --color-accent-light: #E7F1FF;
+  --color-accent: #000000;
+  --color-accent-light: #F1F3F5;
 
   /* --- Semantic / Status Colors --- */
   --color-success: #28A745;

@@ -18,7 +18,7 @@ const EmptyState = ({
   const getIcon = () => {
     switch (type) {
       case 'products':
-        return <MdInventory2 className="text-[40px] text-[#007BFF]" />;
+        return <MdInventory2 className="text-[40px] text-[#000000]" />;
       case 'categories':
         return <MdCategory className="text-[40px] text-[#28A745]" />;
       case 'users':
@@ -33,7 +33,7 @@ const EmptyState = ({
   const getBackgroundColor = () => {
     switch (type) {
       case 'products':
-        return 'bg-[#E7F3FF]';
+        return 'bg-[#F1F3F5]';
       case 'categories':
         return 'bg-[#D1FAE5]';
       case 'users':
@@ -57,7 +57,7 @@ const EmptyState = ({
       {onAction && actionLabel && (
         <button
           onClick={onAction}
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#007BFF] text-white rounded-lg font-semibold hover:bg-[#0056b3] transition-colors"
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#000000] text-white rounded-lg font-semibold hover:bg-[#1A1A1A] transition-colors"
         >
           <MdAdd className="text-[18px]" />
           {actionLabel}

@@ -46,7 +46,7 @@ const PaymentPage = () => {
           <div className="mb-8">
             <button
               onClick={() => navigate('/billing')}
-              className="flex items-center gap-2 text-[#007BFF] hover:text-[#0056b3] text-[14px] font-semibold mb-4 transition-colors"
+              className="flex items-center gap-2 text-[#212529] hover:text-[#000000] text-[14px] font-semibold mb-4 transition-colors"
             >
               <MdArrowBack className="text-[18px]" />
               Back to Cart
@@ -87,7 +87,7 @@ const PaymentPage = () => {
                   {/* Content */}
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-1">
-                      <MdCreditCard className="text-[24px] text-[#007BFF]" />
+                      <MdCreditCard className="text-[24px] text-[#212529]" />
                       <h3 className="text-[16px] font-semibold text-[#212529]">Online Payment</h3>
                     </div>
                     <p className="text-[13px] text-[#6C757D] ml-9">

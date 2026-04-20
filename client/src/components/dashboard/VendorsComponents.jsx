@@ -1,6 +1,19 @@
 import { useState, useEffect } from 'react';
 import { MdSearch, MdPhone, MdEmail, MdLocationOn, MdClose, MdArrowBack, MdAdd } from 'react-icons/md';
-import { getVendors, getVendorById, getVendorProducts, getVendorOrders, createVendor } from '../../api';
+import toast from 'react-hot-toast';
+import {
+  AuthService,
+  getProducts,
+  getVendors,
+  getVendorById,
+  getVendorProducts,
+  getVendorOrders,
+  createVendor,
+  updateVendor,
+  createVendorSupplyRequest,
+  getVendorSupplyRequests,
+  updateVendorSupplyRequestStatus,
+} from '../../api';
 
 // ============================================
 // VENDORS HEADER COMPONENT
@@ -14,7 +27,7 @@ export const VendorsHeader = ({ onAddVendor }) => {
       </div>
       <button
         onClick={onAddVendor}
-        className="flex items-center gap-2 px-4 py-2 bg-[#0D6EFD] text-white font-semibold rounded-lg hover:bg-[#0B5ED7] transition-colors"
+        className="flex items-center gap-2 px-4 py-2 bg-[#000000] text-white font-semibold rounded-lg hover:bg-[#1A1A1A] transition-colors"
       >
         <MdAdd className="text-xl" />
         Add Vendor
@@ -165,7 +178,7 @@ const VendorCard = ({ vendor, onSelect }) => {
   return (
     <div
       onClick={onSelect}
-      className="bg-white rounded-lg border border-[#DEE2E6] p-6 hover:shadow-lg hover:border-[#0D6EFD] transition-all cursor-pointer"
+      className="bg-white rounded-lg border border-[#DEE2E6] p-6 hover:shadow-lg hover:border-[#000000] transition-all cursor-pointer"
     >
       {/* Vendor Header */}
       <div className="flex items-start justify-between mb-4">
@@ -207,9 +220,12 @@ const VendorDetailView = ({ vendorId, onBack }) => {
   const [vendor, setVendor] = useState(null);
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [supplyRequests, setSupplyRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('products'); // 'products' or 'history'
+  const [activeTab, setActiveTab] = useState('products'); // products | history | requests
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showOrderModal, setShowOrderModal] = useState(false);
 
   useEffect(() => {
     fetchVendorDetails();
@@ -220,20 +236,70 @@ const VendorDetailView = ({ vendorId, onBack }) => {
       setLoading(true);
       setError(null);
       
-      const [vendorRes, productsRes, ordersRes] = await Promise.all([
+      const [vendorRes, productsRes, ordersRes, requestsRes] = await Promise.all([
         getVendorById(vendorId),
         getVendorProducts(vendorId),
         getVendorOrders(vendorId),
+        getVendorSupplyRequests(vendorId),
       ]);
 
       setVendor(vendorRes.data);
       setProducts(productsRes.data || []);
       setOrders(ordersRes.data || []);
+      setSupplyRequests(requestsRes.data || []);
     } catch (err) {
       console.error('Error fetching vendor details:', err);
       setError(err.message || 'Failed to load vendor details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshSupplyRequests = async () => {
+    try {
+      const requestsRes = await getVendorSupplyRequests(vendorId);
+      setSupplyRequests(requestsRes.data || []);
+    } catch (err) {
+      console.error('Error refreshing supply requests:', err);
+    }
+  };
+
+  const handleVendorUpdated = (updatedVendor) => {
+    setVendor(updatedVendor);
+    setShowEditModal(false);
+    toast.success('Vendor updated successfully');
+  };
+
+  const handleToggleStatus = async () => {
+    if (!vendor) return;
+
+    const nextStatus = vendor.status === 'active' ? 'inactive' : 'active';
+
+    try {
+      const response = await updateVendor(vendor._id, { status: nextStatus });
+      setVendor(response.data);
+      toast.success(`Vendor marked as ${nextStatus}`);
+    } catch (err) {
+      toast.error(err.message || 'Failed to update vendor status');
+    }
+  };
+
+  const handleOrderCreated = async () => {
+    setShowOrderModal(false);
+    await refreshSupplyRequests();
+    toast.success('Order request sent to vendor');
+  };
+
+  const handleMarkRequestReady = async (requestId) => {
+    try {
+      await updateVendorSupplyRequestStatus(vendorId, requestId, {
+        status: 'shipped',
+        vendorResponseNotes: 'Ready for dispatch',
+      });
+      await refreshSupplyRequests();
+      toast.success('Request marked as ready and admin notification created');
+    } catch (err) {
+      toast.error(err.message || 'Failed to update request');
     }
   };
 
@@ -259,7 +325,7 @@ const VendorDetailView = ({ vendorId, onBack }) => {
         <p className="text-[#6C757D] mb-4">Vendor not found</p>
         <button
           onClick={onBack}
-          className="px-4 py-2 bg-[#0D6EFD] text-white rounded hover:bg-[#0B5ED7] transition-colors"
+          className="px-4 py-2 bg-[#000000] text-white rounded hover:bg-[#1A1A1A] transition-colors"
         >
           Go Back
         </button>
@@ -278,19 +344,39 @@ const VendorDetailView = ({ vendorId, onBack }) => {
       {/* Back Button */}
       <button
         onClick={onBack}
-        className="flex items-center gap-2 px-4 py-2 text-[#0D6EFD] hover:text-[#0B5ED7] transition-colors"
+        className="flex items-center gap-2 px-4 py-2 text-[#212529] hover:text-[#000000] transition-colors"
       >
         <MdArrowBack /> Back to Vendors
       </button>
 
       {/* Vendor Header Section */}
       <div className="bg-white rounded-lg border border-[#DEE2E6] p-8">
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex-1">
             <h1 className="text-3xl font-bold text-[#212529]">{vendor.name}</h1>
             <span className={`inline-block px-3 py-1 rounded text-sm font-semibold mt-3 ${statusColors[vendor.status] || statusColors.inactive}`}>
               {vendor.status || 'inactive'}
             </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="px-3 py-2 text-sm font-semibold border border-[#DEE2E6] text-[#212529] rounded hover:border-[#000000]"
+            >
+              Edit Vendor
+            </button>
+            <button
+              onClick={handleToggleStatus}
+              className="px-3 py-2 text-sm font-semibold border border-[#DEE2E6] text-[#212529] rounded hover:border-[#000000]"
+            >
+              {vendor.status === 'active' ? 'Deactivate' : 'Activate'}
+            </button>
+            <button
+              onClick={() => setShowOrderModal(true)}
+              className="px-3 py-2 text-sm font-semibold bg-[#000000] text-white rounded hover:bg-[#1A1A1A]"
+            >
+              Send Order
+            </button>
           </div>
         </div>
 
@@ -301,7 +387,7 @@ const VendorDetailView = ({ vendorId, onBack }) => {
             <h3 className="text-lg font-semibold text-[#212529] mb-4">Contact Information</h3>
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <MdPhone className="text-[#0D6EFD] text-xl" />
+                <MdPhone className="text-[#212529] text-xl" />
                 <div>
                   <p className="text-xs text-[#6C757D]">Phone</p>
                   <p className="text-[#212529] font-semibold">{vendor.phone}</p>
@@ -309,7 +395,7 @@ const VendorDetailView = ({ vendorId, onBack }) => {
               </div>
               {vendor.email && (
                 <div className="flex items-center gap-3">
-                  <MdEmail className="text-[#0D6EFD] text-xl" />
+                  <MdEmail className="text-[#212529] text-xl" />
                   <div>
                     <p className="text-xs text-[#6C757D]">Email</p>
                     <p className="text-[#212529] font-semibold">{vendor.email}</p>
@@ -318,7 +404,7 @@ const VendorDetailView = ({ vendorId, onBack }) => {
               )}
               {vendor.address && (
                 <div className="flex items-start gap-3">
-                  <MdLocationOn className="text-[#0D6EFD] text-xl flex-shrink-0 mt-0.5" />
+                  <MdLocationOn className="text-[#212529] text-xl flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-xs text-[#6C757D]">Address</p>
                     <p className="text-[#212529] font-semibold">{vendor.address}</p>
@@ -338,7 +424,7 @@ const VendorDetailView = ({ vendorId, onBack }) => {
             onClick={() => setActiveTab('products')}
             className={`flex-1 px-6 py-4 font-semibold transition-colors ${
               activeTab === 'products'
-                ? 'text-[#0D6EFD] border-b-2 border-[#0D6EFD]'
+                ? 'text-[#000000] border-b-2 border-[#000000]'
                 : 'text-[#6C757D] hover:text-[#495057]'
             }`}
           >
@@ -348,22 +434,52 @@ const VendorDetailView = ({ vendorId, onBack }) => {
             onClick={() => setActiveTab('history')}
             className={`flex-1 px-6 py-4 font-semibold transition-colors ${
               activeTab === 'history'
-                ? 'text-[#0D6EFD] border-b-2 border-[#0D6EFD]'
+                ? 'text-[#000000] border-b-2 border-[#000000]'
                 : 'text-[#6C757D] hover:text-[#495057]'
             }`}
           >
             Order History ({orders.length})
           </button>
+          <button
+            onClick={() => setActiveTab('requests')}
+            className={`flex-1 px-6 py-4 font-semibold transition-colors ${
+              activeTab === 'requests'
+                ? 'text-[#000000] border-b-2 border-[#000000]'
+                : 'text-[#6C757D] hover:text-[#495057]'
+            }`}
+          >
+            Requests ({supplyRequests.length})
+          </button>
         </div>
 
         <div className="p-6">
-          {activeTab === 'products' ? (
-            <ProductsTab products={products} />
-          ) : (
-            <OrderHistoryTab orders={orders} />
+          {activeTab === 'products' && <ProductsTab products={products} />}
+          {activeTab === 'history' && <OrderHistoryTab orders={orders} />}
+          {activeTab === 'requests' && (
+            <SupplyRequestsTab
+              requests={supplyRequests}
+              onMarkReady={handleMarkRequestReady}
+            />
           )}
         </div>
       </div>
+
+      {showEditModal && (
+        <EditVendorModal
+          vendor={vendor}
+          onClose={() => setShowEditModal(false)}
+          onVendorUpdated={handleVendorUpdated}
+        />
+      )}
+
+      {showOrderModal && (
+        <SendOrderModal
+          vendor={vendor}
+          products={products}
+          onClose={() => setShowOrderModal(false)}
+          onOrderCreated={handleOrderCreated}
+        />
+      )}
     </div>
   );
 };
@@ -469,6 +585,373 @@ const OrderHistoryTab = ({ orders }) => {
           })}
         </tbody>
       </table>
+    </div>
+  );
+};
+
+// ============================================
+// SUPPLY REQUESTS TAB COMPONENT
+// ============================================
+const SupplyRequestsTab = ({ requests, onMarkReady }) => {
+  if (requests.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-[#6C757D]">No supply requests yet</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-[#DEE2E6]">
+            <th className="text-left py-3 px-4 font-semibold text-[#6C757D]">Request</th>
+            <th className="text-left py-3 px-4 font-semibold text-[#6C757D]">Product</th>
+            <th className="text-left py-3 px-4 font-semibold text-[#6C757D]">Qty</th>
+            <th className="text-left py-3 px-4 font-semibold text-[#6C757D]">Amount</th>
+            <th className="text-left py-3 px-4 font-semibold text-[#6C757D]">Payment</th>
+            <th className="text-left py-3 px-4 font-semibold text-[#6C757D]">Status</th>
+            <th className="text-left py-3 px-4 font-semibold text-[#6C757D]">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {requests.map((request) => (
+            <tr key={request._id} className="border-b border-[#DEE2E6] hover:bg-[#F8F9FA]">
+              <td className="py-3 px-4 text-[#212529] font-semibold">{request.requestNumber}</td>
+              <td className="py-3 px-4 text-[#6C757D]">{request.productId?.name || 'N/A'}</td>
+              <td className="py-3 px-4 text-[#212529]">{request.quantity}</td>
+              <td className="py-3 px-4 text-[#212529] font-semibold">
+                ₹{Number(request.totalAmount || 0).toFixed(2)}
+              </td>
+              <td className="py-3 px-4">
+                <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                  request.paymentStatus === 'paid'
+                    ? 'bg-[#D4EDDA] text-[#155724]'
+                    : 'bg-[#FFF3CD] text-[#856404]'
+                }`}>
+                  {request.paymentStatus || 'unpaid'}
+                </span>
+              </td>
+              <td className="py-3 px-4">
+                <span className="px-2 py-1 rounded text-xs font-semibold bg-[#E2E3E5] text-[#383D41]">
+                  {request.status || 'pending'}
+                </span>
+              </td>
+              <td className="py-3 px-4">
+                {(request.status === 'pending' || request.status === 'confirmed') && (
+                  <button
+                    onClick={() => onMarkReady(request._id)}
+                    className="px-2 py-1 text-xs font-semibold bg-[#000000] text-white rounded hover:bg-[#1A1A1A]"
+                  >
+                    Mark Ready
+                  </button>
+                )}
+                {request.status === 'shipped' && (
+                  <span className="text-xs text-[#6C757D]">Awaiting admin payment</span>
+                )}
+                {request.paymentStatus === 'paid' && (
+                  <span className="text-xs text-[#155724]">Paid</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+// ============================================
+// EDIT VENDOR MODAL
+// ============================================
+const EditVendorModal = ({ vendor, onClose, onVendorUpdated }) => {
+  const [formData, setFormData] = useState({
+    name: vendor?.name || '',
+    email: vendor?.email || '',
+    phone: vendor?.phone || '',
+    address: vendor?.address || '',
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!formData.name.trim() || !formData.phone.trim() || !formData.address.trim()) {
+      toast.error('Name, phone, and address are required');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const response = await updateVendor(vendor._id, formData);
+      onVendorUpdated(response.data);
+    } catch (err) {
+      toast.error(err.message || 'Failed to update vendor');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div className="w-full max-w-xl bg-white rounded-xl border border-[#DEE2E6] p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-xl font-bold text-[#212529]">Edit Vendor</h3>
+          <button onClick={onClose} className="text-[#6C757D] hover:text-[#212529]">
+            <MdClose className="text-2xl" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            type="text"
+            value={formData.name}
+            onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+            placeholder="Vendor name"
+            className="w-full px-4 py-2 border border-[#DEE2E6] rounded-lg focus:outline-none focus:border-[#000000]"
+          />
+          <input
+            type="email"
+            value={formData.email}
+            onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+            placeholder="Email"
+            className="w-full px-4 py-2 border border-[#DEE2E6] rounded-lg focus:outline-none focus:border-[#000000]"
+          />
+          <input
+            type="text"
+            value={formData.phone}
+            onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+            placeholder="Phone"
+            className="w-full px-4 py-2 border border-[#DEE2E6] rounded-lg focus:outline-none focus:border-[#000000]"
+          />
+          <textarea
+            rows="3"
+            value={formData.address}
+            onChange={(e) => setFormData((prev) => ({ ...prev, address: e.target.value }))}
+            placeholder="Address"
+            className="w-full px-4 py-2 border border-[#DEE2E6] rounded-lg focus:outline-none focus:border-[#000000] resize-none"
+          />
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 border border-[#DEE2E6] rounded-lg text-[#212529]"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-4 py-2 bg-[#000000] text-white rounded-lg disabled:opacity-60"
+            >
+              {submitting ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// SEND ORDER MODAL
+// ============================================
+const SendOrderModal = ({ vendor, products, onClose, onOrderCreated }) => {
+  const user = AuthService.getUser();
+  const company = AuthService.getCompany();
+
+  const normalizeProduct = (item) => {
+    const productId = item?._id || item?.id;
+    if (!productId) return null;
+
+    return {
+      ...item,
+      _id: productId,
+      price: Number(item?.price || 0),
+    };
+  };
+
+  const [availableProducts, setAvailableProducts] = useState(
+    (products || []).map(normalizeProduct).filter(Boolean)
+  );
+  const [loadingProducts, setLoadingProducts] = useState(false);
+
+  const [formData, setFormData] = useState({
+    productId: '',
+    quantity: 1,
+    expectedDeliveryDate: '',
+    quotedPrice: 0,
+    notes: '',
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const normalized = (products || []).map(normalizeProduct).filter(Boolean);
+    setAvailableProducts(normalized);
+  }, [products]);
+
+  useEffect(() => {
+    const loadFallbackProducts = async () => {
+      if ((products || []).length > 0) return;
+
+      try {
+        setLoadingProducts(true);
+        const response = await getProducts({ page: 1, limit: 200 });
+        const normalized = (response.products || []).map(normalizeProduct).filter(Boolean);
+        setAvailableProducts(normalized);
+      } catch (err) {
+        console.error('Failed to load products for order modal:', err);
+        setAvailableProducts([]);
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+
+    loadFallbackProducts();
+  }, [products]);
+
+  useEffect(() => {
+    if (formData.productId || availableProducts.length === 0) return;
+
+    const firstProduct = availableProducts[0];
+    setFormData((prev) => ({
+      ...prev,
+      productId: firstProduct._id,
+      quotedPrice: firstProduct.price || 0,
+    }));
+  }, [availableProducts, formData.productId]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!formData.productId || !formData.quantity || !formData.expectedDeliveryDate || !formData.quotedPrice) {
+      toast.error('All required fields must be filled');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await createVendorSupplyRequest(vendor._id, {
+        ...formData,
+        quantity: Number(formData.quantity),
+        quotedPrice: Number(formData.quotedPrice),
+        shopName: company?.name || '',
+        ownerName: user?.name || '',
+        ownerEmail: user?.email || '',
+        ownerPhone: user?.phone || '',
+      });
+      await onOrderCreated();
+    } catch (err) {
+      toast.error(err.message || 'Failed to create supply request');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div className="w-full max-w-2xl bg-white rounded-xl border border-[#DEE2E6] p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-xl font-bold text-[#212529]">Send Order to {vendor.name}</h3>
+          <button onClick={onClose} className="text-[#6C757D] hover:text-[#212529]">
+            <MdClose className="text-2xl" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2">
+            <label className="block text-sm font-semibold text-[#212529] mb-1">Product</label>
+            <select
+              value={formData.productId}
+              disabled={loadingProducts || availableProducts.length === 0}
+              onChange={(e) => {
+                const product = availableProducts.find((item) => item._id === e.target.value);
+                setFormData((prev) => ({
+                  ...prev,
+                  productId: e.target.value,
+                  quotedPrice: product?.price || prev.quotedPrice,
+                }));
+              }}
+              className="w-full px-4 py-2 border border-[#DEE2E6] rounded-lg focus:outline-none focus:border-[#000000]"
+            >
+              <option value="">{loadingProducts ? 'Loading products...' : 'Select product'}</option>
+              {availableProducts.map((product) => (
+                <option key={product._id} value={product._id}>
+                  {product.name} ({product.sku})
+                </option>
+              ))}
+            </select>
+            {!loadingProducts && availableProducts.length === 0 && (
+              <p className="text-[12px] text-[#DC3545] mt-2">
+                No products found. Add products first, then send order request.
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-[#212529] mb-1">Quantity</label>
+            <input
+              type="number"
+              min="1"
+              value={formData.quantity}
+              onChange={(e) => setFormData((prev) => ({ ...prev, quantity: e.target.value }))}
+              className="w-full px-4 py-2 border border-[#DEE2E6] rounded-lg focus:outline-none focus:border-[#000000]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-[#212529] mb-1">Quoted Price</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.quotedPrice}
+              onChange={(e) => setFormData((prev) => ({ ...prev, quotedPrice: e.target.value }))}
+              className="w-full px-4 py-2 border border-[#DEE2E6] rounded-lg focus:outline-none focus:border-[#000000]"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-semibold text-[#212529] mb-1">Expected Delivery</label>
+            <input
+              type="date"
+              value={formData.expectedDeliveryDate}
+              onChange={(e) => setFormData((prev) => ({ ...prev, expectedDeliveryDate: e.target.value }))}
+              className="w-full px-4 py-2 border border-[#DEE2E6] rounded-lg focus:outline-none focus:border-[#000000]"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-semibold text-[#212529] mb-1">Notes</label>
+            <textarea
+              rows="3"
+              value={formData.notes}
+              onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
+              className="w-full px-4 py-2 border border-[#DEE2E6] rounded-lg focus:outline-none focus:border-[#000000] resize-none"
+              placeholder="Any additional instructions"
+            />
+          </div>
+
+          <div className="md:col-span-2 flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 border border-[#DEE2E6] rounded-lg text-[#212529]"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || loadingProducts || availableProducts.length === 0}
+              className="px-4 py-2 bg-[#000000] text-white rounded-lg disabled:opacity-60"
+            >
+              {submitting ? 'Sending...' : 'Send Request'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
@@ -580,7 +1063,7 @@ const AddVendorForm = ({ onClose, onVendorAdded }) => {
               value={formData.name}
               onChange={handleChange}
               placeholder="Enter vendor name"
-              className="w-full px-4 py-2 border border-[#DEE2E6] rounded-lg focus:outline-none focus:border-[#0D6EFD] focus:ring-1 focus:ring-[#0D6EFD]"
+              className="w-full px-4 py-2 border border-[#DEE2E6] rounded-lg focus:outline-none focus:border-[#000000] focus:ring-1 focus:ring-[#000000]"
               disabled={loading}
             />
           </div>
@@ -596,7 +1079,7 @@ const AddVendorForm = ({ onClose, onVendorAdded }) => {
               value={formData.phone}
               onChange={handleChange}
               placeholder="Enter phone number"
-              className="w-full px-4 py-2 border border-[#DEE2E6] rounded-lg focus:outline-none focus:border-[#0D6EFD] focus:ring-1 focus:ring-[#0D6EFD]"
+              className="w-full px-4 py-2 border border-[#DEE2E6] rounded-lg focus:outline-none focus:border-[#000000] focus:ring-1 focus:ring-[#000000]"
               disabled={loading}
             />
           </div>
@@ -612,7 +1095,7 @@ const AddVendorForm = ({ onClose, onVendorAdded }) => {
               value={formData.email}
               onChange={handleChange}
               placeholder="Enter email address"
-              className="w-full px-4 py-2 border border-[#DEE2E6] rounded-lg focus:outline-none focus:border-[#0D6EFD] focus:ring-1 focus:ring-[#0D6EFD]"
+              className="w-full px-4 py-2 border border-[#DEE2E6] rounded-lg focus:outline-none focus:border-[#000000] focus:ring-1 focus:ring-[#000000]"
               disabled={loading}
             />
           </div>
@@ -632,7 +1115,7 @@ const AddVendorForm = ({ onClose, onVendorAdded }) => {
             onChange={handleChange}
             placeholder="Enter vendor address"
             rows="4"
-            className="w-full px-4 py-2 border border-[#DEE2E6] rounded-lg focus:outline-none focus:border-[#0D6EFD] focus:ring-1 focus:ring-[#0D6EFD] resize-none"
+            className="w-full px-4 py-2 border border-[#DEE2E6] rounded-lg focus:outline-none focus:border-[#000000] focus:ring-1 focus:ring-[#000000] resize-none"
             disabled={loading}
           />
         </div>
@@ -649,7 +1132,7 @@ const AddVendorForm = ({ onClose, onVendorAdded }) => {
           </button>
           <button
             type="submit"
-            className="px-6 py-2 bg-[#0D6EFD] text-white font-semibold rounded-lg hover:bg-[#0B5ED7] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-2 bg-[#000000] text-white font-semibold rounded-lg hover:bg-[#1A1A1A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={loading}
           >
             {loading ? 'Creating...' : 'Add Vendor'}

@@ -438,7 +438,7 @@ const ProductsTable = ({ onProductsChanged }) => {
                           </div>
                         ) : (
                           <p
-                            className="text-[14px] font-semibold text-[#212529] cursor-pointer hover:text-[#0056b3] transition-colors"
+                            className="text-[14px] font-semibold text-[#212529] cursor-pointer hover:text-[#343A40] transition-colors"
                             onClick={() => handleStockEdit(product)}
                             title="Click to edit stock"
                           >
@@ -467,7 +467,7 @@ const ProductsTable = ({ onProductsChanged }) => {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => handleEdit(product.id)}
-                            className="text-black hover:text-[#0056b3] transition-colors"
+                            className="text-black hover:text-[#343A40] transition-colors"
                           >
                             <MdEdit className="text-[20px]" />
                           </button>

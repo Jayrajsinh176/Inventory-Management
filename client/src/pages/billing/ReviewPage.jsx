@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MdArrowBack } from 'react-icons/md';
+import toast from 'react-hot-toast';
 import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
 import { GST_RATE } from '../../constants/pos';
+import { AuthService } from '../../api';
 
 const ReviewPage = () => {
   const navigate = useNavigate();
@@ -21,21 +23,62 @@ const ReviewPage = () => {
   const handleConfirm = async () => {
     setIsProcessing(true);
 
-    // Simulate payment processing (1-2 seconds)
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      const token = AuthService.getToken();
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/orders`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: cartItems.map((item) => ({
+            product: item.id,
+            productName: item.name,
+            productSku: item.sku,
+            quantity: item.quantity,
+            unitPrice: item.price,
+            subtotal: item.price * item.quantity,
+          })),
+          subtotal,
+          tax: gst,
+          discount: 0,
+          total,
+          paymentMethod,
+          paymentStatus: 'paid',
+          customerName: 'Walk-in Customer',
+          customerPhone: '',
+          customerEmail: '',
+          notes: 'Created from POS billing flow',
+        }),
+      });
 
-    navigate('/billing/success', {
-      state: {
-        cartItems,
-        subtotal,
-        gst,
-        total,
-        paymentMethod,
-        orderDate: new Date().toLocaleString('en-IN'),
-        orderId: `ORD-${Date.now()}`,
-        transactionId: `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to place order');
       }
-    });
+
+      const order = data.order;
+      const invoice = data.invoice;
+
+      navigate('/billing/success', {
+        state: {
+          cartItems,
+          subtotal,
+          gst,
+          total,
+          paymentMethod,
+          orderDate: new Date(order?.createdAt || Date.now()).toLocaleString('en-IN'),
+          orderId: order?.orderNumber || order?._id,
+          transactionId: order?.transactionId || invoice?.transactionId || 'N/A',
+        }
+      });
+    } catch (error) {
+      toast.error(error.message || 'Failed to confirm payment');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleBack = () => {
@@ -60,7 +103,7 @@ const ReviewPage = () => {
           <div className="mb-8">
             <button
               onClick={handleBack}
-              className="flex items-center gap-2 text-[#007BFF] hover:text-[#0056b3] text-[14px] font-semibold mb-4 transition-colors"
+              className="flex items-center gap-2 text-[#212529] hover:text-[#000000] text-[14px] font-semibold mb-4 transition-colors"
             >
               <MdArrowBack className="text-[18px]" />
               Back to Payment
@@ -142,8 +185,8 @@ const ReviewPage = () => {
                 </div>
 
                 {/* Payment Method */}
-                <div className="mt-6 p-4 bg-[#E7F1FF] border border-[#92CDFF] rounded-lg">
-                  <p className="text-[12px] text-[#004085]">
+                <div className="mt-6 p-4 bg-[#F8F9FA] border border-[#DEE2E6] rounded-lg">
+                  <p className="text-[12px] text-[#212529]">
                     <span className="font-semibold">Payment Method:</span> {paymentMethod.toUpperCase()}
                   </p>
                 </div>

@@ -789,3 +789,156 @@ export async function createVendor(vendorData) {
 
   return data;
 }
+
+/**
+ * Update vendor details/status
+ * @param {string} vendorId - Vendor ID
+ * @param {Object} vendorData - fields to update
+ * @returns {Promise<Object>} Updated vendor payload
+ */
+export async function updateVendor(vendorId, vendorData) {
+  const response = await fetch(`${API_BASE_URL}/api/vendor/${vendorId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeader(),
+    },
+    body: JSON.stringify(vendorData),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Failed to update vendor');
+  }
+
+  return data;
+}
+
+/**
+ * Create a supply request for a vendor
+ * @param {string} vendorId - Vendor ID
+ * @param {Object} payload - supply request payload
+ * @returns {Promise<Object>} Created request payload
+ */
+export async function createVendorSupplyRequest(vendorId, payload) {
+  const response = await fetch(`${API_BASE_URL}/api/vendor/${vendorId}/supply-requests`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeader(),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Failed to create supply request');
+  }
+
+  return data;
+}
+
+/**
+ * Get all supply requests for a vendor
+ * @param {string} vendorId - Vendor ID
+ * @param {string} [status] - optional status filter
+ * @returns {Promise<Object>} Supply requests
+ */
+export async function getVendorSupplyRequests(vendorId, status) {
+  const query = new URLSearchParams();
+  if (status) query.set('status', status);
+
+  const response = await fetch(`${API_BASE_URL}/api/vendor/${vendorId}/supply-requests?${query.toString()}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeader(),
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Failed to fetch supply requests');
+  }
+
+  return data;
+}
+
+/**
+ * Get a supply request by vendor and request ID
+ * @param {string} vendorId
+ * @param {string} requestId
+ * @returns {Promise<Object>} Supply request
+ */
+export async function getVendorSupplyRequestById(vendorId, requestId) {
+  const response = await fetch(`${API_BASE_URL}/api/vendor/${vendorId}/supply-requests/${requestId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeader(),
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Failed to fetch supply request details');
+  }
+
+  return data;
+}
+
+/**
+ * Update supply request status
+ * @param {string} vendorId
+ * @param {string} requestId
+ * @param {Object} payload
+ * @returns {Promise<Object>} Updated request
+ */
+export async function updateVendorSupplyRequestStatus(vendorId, requestId, payload) {
+  const response = await fetch(`${API_BASE_URL}/api/vendor/${vendorId}/supply-requests/${requestId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeader(),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Failed to update supply request status');
+  }
+
+  return data;
+}
+
+/**
+ * Mark supply request as paid
+ * @param {string} vendorId
+ * @param {string} requestId
+ * @param {Object} payload
+ * @returns {Promise<Object>} Payment confirmation
+ */
+export async function payVendorSupplyRequest(vendorId, requestId, payload) {
+  const response = await fetch(`${API_BASE_URL}/api/vendor/${vendorId}/supply-requests/${requestId}/pay`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeader(),
+    },
+    body: JSON.stringify(payload || {}),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Failed to complete payment');
+  }
+
+  return data;
+}

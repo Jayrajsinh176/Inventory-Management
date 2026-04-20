@@ -262,7 +262,7 @@ const BillingPage = () => {
           <div className="mb-8">
             <button
               onClick={() => navigate('/dashboard')}
-              className="flex items-center gap-2 text-[#007BFF] hover:text-[#0056b3] text-[14px] font-semibold mb-4 transition-colors"
+              className="flex items-center gap-2 text-[#212529] hover:text-[#000000] text-[14px] font-semibold mb-4 transition-colors"
             >
               <MdArrowBack className="text-[18px]" />
               Back to Dashboard

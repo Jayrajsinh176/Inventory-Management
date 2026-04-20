@@ -108,7 +108,7 @@ const ProfilePage = () => {
           <main className="p-4 sm:p-6 lg:p-8">
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin">
-                <div className="w-12 h-12 border-4 border-[#DEE2E6] border-t-[#007BFF] rounded-full"></div>
+                <div className="w-12 h-12 border-4 border-[#DEE2E6] border-t-[#000000] rounded-full"></div>
               </div>
             </div>
           </main>
@@ -158,7 +158,7 @@ const ProfilePage = () => {
                         name="name"
                         value={formData.name}
                         onChange={handleChange}
-                        className="w-full pl-10 pr-4 py-3 border border-[#DEE2E6] rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
+                        className="w-full pl-10 pr-4 py-3 border border-[#DEE2E6] rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-[#000000] focus:border-transparent"
                         placeholder="Enter your full name"
                       />
                     </div>
@@ -194,7 +194,7 @@ const ProfilePage = () => {
                         name="phone"
                         value={formData.phone}
                         onChange={handleChange}
-                        className="w-full pl-10 pr-4 py-3 border border-[#DEE2E6] rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-[#007BFF] focus:border-transparent"
+                        className="w-full pl-10 pr-4 py-3 border border-[#DEE2E6] rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-[#000000] focus:border-transparent"
                         placeholder="Enter your phone number"
                       />
                     </div>
@@ -219,7 +219,7 @@ const ProfilePage = () => {
                     <button
                       type="submit"
                       disabled={saving}
-                      className="flex items-center gap-2 px-6 py-3 bg-[#007BFF] text-white rounded-lg font-semibold hover:bg-[#0056b3] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-2 px-6 py-3 bg-[#000000] text-white rounded-lg font-semibold hover:bg-[#1A1A1A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <MdSave className="text-[20px]" />
                       {saving ? 'Saving...' : 'Save Changes'}
@@ -236,7 +236,7 @@ const ProfilePage = () => {
                 
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-[#007BFF] rounded-full flex items-center justify-center">
+                    <div className="w-12 h-12 bg-[#000000] rounded-full flex items-center justify-center">
                       <MdBusiness className="text-[24px] text-white" />
                     </div>
                     <div>
