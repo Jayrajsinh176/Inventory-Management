@@ -1,6 +1,6 @@
 import Company from "../models/company.model.js";
 import { SUBSCRIPTION_PLANS } from "../utils/subscription.js";
-import Subscription from "../models/Subscription.model.js";
+import Subscription from "../models/subscription.model.js";
 import Notification from "../models/notification.model.js";
 import Alert from "../models/alert.model.js";
 import { sendEmail, getFrontendBaseUrl } from "../utils/email.js";
