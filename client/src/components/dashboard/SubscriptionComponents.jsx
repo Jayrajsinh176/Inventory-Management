@@ -259,6 +259,11 @@ const PlanUpgradeCards = () => {
   const [currentPlanId, setCurrentPlanId] = useState("Basic");
   const [loading, setLoading] = useState(true);
   const [updatingPlan, setUpdatingPlan] = useState(false);
+const planOrder = ["Trial", "Basic", "Standard", "Business"];
+
+const sortedPlans = [...plans].sort(
+  (a, b) => planOrder.indexOf(a.id) - planOrder.indexOf(b.id)
+);
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -330,7 +335,7 @@ const PlanUpgradeCards = () => {
       </h3>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {plans.map((plan) => {
+{sortedPlans.map((plan) => {
           const isCurrent = plan.id === currentPlanId;
           const planPrice = plan.durationDays
             ? "Free for 7 days"
