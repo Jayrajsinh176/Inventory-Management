@@ -112,6 +112,12 @@ const orderSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+ locationId: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "Franchise",
+  default: null,
+  index: true,
+},
   },
   { timestamps: true }
 );
@@ -119,7 +125,7 @@ const orderSchema = new mongoose.Schema(
 orderSchema.index({ company: 1, createdAt: -1 });
 orderSchema.index({ company: 1, status: 1 });
 orderSchema.index({ company: 1, user: 1 });
-orderSchema.index({ orderNumber: 1 });
+// orderSchema.index({ orderNumber: 1 });
 
 const Order = mongoose.model('Order', orderSchema);
 export default Order;

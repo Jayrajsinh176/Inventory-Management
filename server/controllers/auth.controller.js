@@ -2,6 +2,7 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import User from "../models/users.model.js";
 import Company from "../models/company.model.js";
+import Franchise from "../models/franchise.model.js";
 import {
   getBackendBaseUrl,
   getFrontendBaseUrl,
@@ -292,15 +293,23 @@ export const registerUser = async (req, res) => {
       address,
     });
 
-    user = await User.create({
-      company: company._id,
-      name,
-      email,
-      phone,
-      password,
-      role: "admin",
-      isEmailVerified: false,
-    });
+    const defaultLocation = await Franchise.create({
+  company: company._id,
+  name: "Main Store",
+  address,
+  isDefault: true,
+});
+
+   user = await User.create({
+  company: company._id,
+  locationId: defaultLocation._id,
+  name,
+  email,
+  phone,
+  password,
+  role: "admin",
+  isEmailVerified: false,
+});
 
     const verificationToken = setEmailVerificationToken(user);
     await user.save();

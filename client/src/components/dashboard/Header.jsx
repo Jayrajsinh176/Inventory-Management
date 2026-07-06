@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MdSearch, MdNotifications, MdPerson, MdLogout, MdMenu } from 'react-icons/md';
 import { AuthService } from '../../api';
-
+import { MdWorkspacePremium } from "react-icons/md";
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const Header = () => {
@@ -11,9 +11,15 @@ const Header = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef(null);
-  
+
   const user = AuthService.getUser();
-  const userInitials = user?.name 
+  const company = AuthService.getCompany();
+
+  const currentPlan = company?.plan
+    ? company.plan.charAt(0).toUpperCase() +
+    company.plan.slice(1)
+    : "Trial";
+  const userInitials = user?.name
     ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : 'U';
 
@@ -97,8 +103,17 @@ const Header = () => {
 
       {/* Right Section */}
       <div className="flex items-center gap-4 sm:gap-6">
+        {/* Current Plan */}
+<div className="hidden lg:flex items-center">
+  <div className="flex items-center gap-2 px-4 h-10 rounded-full bg-[#1E293B] text-white shadow-sm border border-[#334155]">
+    <MdWorkspacePremium className="text-[#FBBF24] text-[18px]" />
+    <span className="text-[13px] font-medium">
+      {currentPlan} Plan
+    </span>
+  </div>
+</div>
         {/* Notifications */}
-        <button 
+        <button
           onClick={() => navigate('/notifications')}
           className="relative text-[#6C757D] hover:text-[#212529] transition-colors"
           title="Notifications"
@@ -113,7 +128,7 @@ const Header = () => {
 
         {/* User Avatar with Dropdown */}
         <div className="relative" ref={menuRef}>
-          <button 
+          <button
             onClick={() => setShowUserMenu(!showUserMenu)}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
@@ -133,14 +148,14 @@ const Header = () => {
 
               {/* Menu Items */}
               <div className="py-1">
-                <button 
+                <button
                   onClick={() => { setShowUserMenu(false); navigate('/profile'); }}
                   className="w-full px-4 py-2 text-left text-[14px] text-[#212529] hover:bg-[#F8F9FA] flex items-center gap-3 transition-colors"
                 >
                   <MdPerson className="text-[18px] text-[#6C757D]" />
                   My Profile
                 </button>
-                <button 
+                <button
                   onClick={() => { setShowUserMenu(false); navigate('/notifications'); }}
                   className="w-full px-4 py-2 text-left text-[14px] text-[#212529] hover:bg-[#F8F9FA] flex items-center gap-3 transition-colors"
                 >
@@ -156,7 +171,7 @@ const Header = () => {
 
               {/* Logout */}
               <div className="border-t border-[#DEE2E6] pt-1 mt-1">
-                <button 
+                <button
                   onClick={handleLogout}
                   className="w-full px-4 py-2 text-left text-[14px] text-[#DC3545] hover:bg-[#FEE2E2] flex items-center gap-3 transition-colors"
                 >

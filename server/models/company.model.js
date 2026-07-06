@@ -29,11 +29,30 @@ const companySchema = new mongoose.Schema(
       required: [true, "Address is required"],
       maxlength: 500,
     },
+    companyId: {
+  type: String,
+  unique: true,
+  index: true,
+},
+
+parentCompany: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "Company",
+  default: null,
+},
+isFranchise: {
+  type: Boolean,
+  default: false,
+},
+gstNumber: {
+  type: String,
+  default: "",
+},
     plan: {
-      type: String,
-      enum: ["basic","pro","business","trial"],
-      default: "trial",
-    },
+  type: String,
+  enum: ["Basic", "Standard", "Business", "Trial"],
+},
+
     subscription_start_date: {
       type: Date,
       default : Date.now,
@@ -48,7 +67,7 @@ const companySchema = new mongoose.Schema(
 );
 
 companySchema.pre("save", async function () {
-  if (this.isNew && this.plan === "trial") {
+  if (this.isNew && this.plan === "Trial") {
     const start = this.subscription_start_date || Date.now();
     this.subscription_end_date = new Date(
       new Date(start).getTime() + 7 * 24 * 60 * 60 * 1000

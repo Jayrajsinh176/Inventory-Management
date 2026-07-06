@@ -88,7 +88,7 @@ const LowStockAlerts = () => {
   }
 
   return (
-    <div className="bg-white rounded-lg border border-[#DEE2E6] shadow-md">
+    <div className="bg-white rounded-lg border border-[#DEE2E6] shadow-md mb-5">
       {/* Header */}
       <div className="px-6 py-4 border-b border-[#DEE2E6] bg-[#F8F9FA]">
         <div className="flex items-center gap-2">

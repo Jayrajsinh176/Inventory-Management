@@ -23,6 +23,7 @@ export const createOrder = async (req, res) => {
             customerName,
             customerEmail,
             customerPhone,
+              customerAddress,
             notes
         } = req.body;
 
@@ -67,14 +68,15 @@ export const createOrder = async (req, res) => {
                 return res.status(404).json({ message: `Product ${item.product} not found` });
             }
             if (product.stock < item.quantity) {
-                return res.status(400).json({ 
-                    message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}` 
+                return res.status(400).json({
+                    message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`
                 });
             }
         }
 
         const order = new Order({
             company: req.user.company,
+            locationId: req.user.locationId,
             user: req.user._id,
             orderNumber,
             items: normalizedItems,
@@ -88,6 +90,7 @@ export const createOrder = async (req, res) => {
             customerName: customerName || 'Walk-in Customer',
             customerEmail,
             customerPhone,
+              customerAddress,
             notes,
             status: resolvedPaymentStatus === 'paid' ? 'completed' : 'pending'
         });
@@ -151,9 +154,9 @@ export const createOrder = async (req, res) => {
 
     } catch (error) {
         console.error("Error creating order:", error);
-        res.status(500).json({ 
-            message: "Error creating order", 
-            error: error.message 
+        res.status(500).json({
+            message: "Error creating order",
+            error: error.message
         });
     }
 };
@@ -165,11 +168,27 @@ export const createOrder = async (req, res) => {
  */
 export const getOrders = async (req, res) => {
     try {
-        const { status, paymentStatus, sortBy = '-createdAt', page = 1, limit = 10 } = req.query;
+        const { status, paymentStatus, search, sortBy = '-createdAt', page = 1, limit = 10 } = req.query;
 
         const filters = { company: req.user.company };
-        
+
         if (status) filters.status = status;
+        if (search) {
+            filters.$or = [
+                {
+                    orderNumber: {
+                        $regex: search,
+                        $options: "i",
+                    },
+                },
+                {
+                    customerName: {
+                        $regex: search,
+                        $options: "i",
+                    },
+                },
+            ];
+        }
         if (paymentStatus) filters.paymentStatus = paymentStatus;
 
         const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -181,11 +200,44 @@ export const getOrders = async (req, res) => {
                 { path: 'items.product', select: 'name sku price' },
                 { path: 'invoiceId' }
             ])
-            .sort(sortBy)
+            .sort({
+                createdAt: -1,
+            })
             .skip(skip)
             .limit(parseInt(limit));
 
         const totalOrders = await Order.countDocuments(filters);
+
+        const today = new Date();
+
+        today.setHours(0, 0, 0, 0);
+
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        const todayOrders = await Order.find({
+            company: req.user.company,
+            createdAt: {
+                $gte: today,
+                $lt: tomorrow,
+            },
+            paymentStatus: "paid",
+        });
+
+        const todayRevenue = todayOrders.reduce(
+            (sum, order) => sum + order.total,
+            0
+        );
+
+        const todayItemsSold = todayOrders.reduce(
+            (sum, order) =>
+                sum +
+                order.items.reduce(
+                    (qty, item) => qty + item.quantity,
+                    0
+                ),
+            0
+        );
 
         res.status(200).json({
             message: "Orders retrieved successfully",
@@ -200,9 +252,9 @@ export const getOrders = async (req, res) => {
 
     } catch (error) {
         console.error("Error retrieving orders:", error);
-        res.status(500).json({ 
-            message: "Error retrieving orders", 
-            error: error.message 
+        res.status(500).json({
+            message: "Error retrieving orders",
+            error: error.message
         });
     }
 };
@@ -244,9 +296,9 @@ export const getOrderById = async (req, res) => {
 
     } catch (error) {
         console.error("Error retrieving order:", error);
-        res.status(500).json({ 
-            message: "Error retrieving order", 
-            error: error.message 
+        res.status(500).json({
+            message: "Error retrieving order",
+            error: error.message
         });
     }
 };
@@ -325,9 +377,9 @@ export const updateOrder = async (req, res) => {
 
     } catch (error) {
         console.error("Error updating order:", error);
-        res.status(500).json({ 
-            message: "Error updating order", 
-            error: error.message 
+        res.status(500).json({
+            message: "Error updating order",
+            error: error.message
         });
     }
 };
@@ -354,8 +406,8 @@ export const deleteOrder = async (req, res) => {
             return res.status(403).json({ message: "Not authorized to delete this order" });
         }
         if (!['pending', 'processing'].includes(order.status)) {
-            return res.status(400).json({ 
-                message: "Cannot delete order. Only pending or processing orders can be deleted." 
+            return res.status(400).json({
+                message: "Cannot delete order. Only pending or processing orders can be deleted."
             });
         }
         for (const item of order.items) {
@@ -381,9 +433,9 @@ export const deleteOrder = async (req, res) => {
 
     } catch (error) {
         console.error("Error deleting order:", error);
-        res.status(500).json({ 
-            message: "Error deleting order", 
-            error: error.message 
+        res.status(500).json({
+            message: "Error deleting order",
+            error: error.message
         });
     }
 };
@@ -398,6 +450,13 @@ export const getOrderStats = async (req, res) => {
         const { dateFrom, dateTo } = req.query;
 
         const filters = { company: req.user.company };
+
+
+        const orders = await Order.find({
+            company: req.user.company
+        });
+
+        console.log("Orders Found:", orders.length);
 
         if (dateFrom || dateTo) {
             filters.createdAt = {};
@@ -415,15 +474,54 @@ export const getOrderStats = async (req, res) => {
         ] = await Promise.all([
             Order.countDocuments(filters),
             Order.aggregate([
-                { $match: filters },
-                { $group: { _id: null, total: { $sum: '$total' } } }
+                {
+                    $match: {
+                        company: new mongoose.Types.ObjectId(req.user.company)
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        total: {
+                            $sum: "$total"
+                        }
+                    }
+                }
             ]),
             Order.countDocuments({ ...filters, paymentStatus: 'paid' }),
             Order.countDocuments({ ...filters, paymentStatus: 'pending' }),
             Order.countDocuments({ ...filters, status: 'completed' }),
             Order.countDocuments({ ...filters, status: 'cancelled' })
         ]);
+const today = new Date();
+today.setHours(0, 0, 0, 0);
 
+const tomorrow = new Date(today);
+tomorrow.setDate(tomorrow.getDate() + 1);
+
+const todayOrders = await Order.find({
+    company: req.user.company,
+    paymentStatus: "paid",
+    createdAt: {
+        $gte: today,
+        $lt: tomorrow,
+    },
+});
+
+const todayRevenue = todayOrders.reduce(
+    (sum, order) => sum + (order.total || 0),
+    0
+);
+
+const todayItemsSold = todayOrders.reduce(
+    (sum, order) =>
+        sum +
+        order.items.reduce(
+            (qty, item) => qty + item.quantity,
+            0
+        ),
+    0
+);
         res.status(200).json({
             message: "Order statistics retrieved successfully",
             stats: {
@@ -433,15 +531,95 @@ export const getOrderStats = async (req, res) => {
                 pendingOrders,
                 completedOrders,
                 cancelledOrders,
-                averageOrderValue: totalOrders > 0 ? (totalRevenue[0]?.total || 0) / totalOrders : 0
+                averageOrderValue: totalOrders > 0 ? (totalRevenue[0]?.total || 0) / totalOrders : 0,
+                   todayOrders: todayOrders.length,
+    todayRevenue,
+    todayItemsSold,
             }
         });
 
     } catch (error) {
         console.error("Error retrieving order stats:", error);
-        res.status(500).json({ 
-            message: "Error retrieving order stats", 
-            error: error.message 
+        res.status(500).json({
+            message: "Error retrieving order stats",
+            error: error.message
         });
     }
 }
+
+export const getDailySalesSummary = async (req, res) => {
+  try {
+    const company = await Company.findById(req.user.company);
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "Company not found",
+      });
+    }
+
+    // Only Standard & Premium
+    if (!["Standard", "Business"].includes(company.plan)) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Daily Sales Summary is available only in the Standard and Business plans.",
+      });
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const orders = await Order.find({
+      company: req.user.company,
+      paymentStatus: "paid",
+      createdAt: {
+        $gte: today,
+        $lt: tomorrow,
+      },
+    });
+
+    const totalOrders = orders.length;
+
+    const totalRevenue = orders.reduce(
+      (sum, order) => sum + (order.total || 0),
+      0
+    );
+
+    const productsSold = orders.reduce(
+      (sum, order) =>
+        sum +
+        order.items.reduce(
+          (qty, item) => qty + item.quantity,
+          0
+        ),
+      0
+    );
+
+    const averageOrder =
+      totalOrders > 0
+        ? totalRevenue / totalOrders
+        : 0;
+
+    return res.status(200).json({
+      success: true,
+      summary: {
+        totalOrders,
+        totalRevenue,
+        productsSold,
+        averageOrder,
+      },
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};

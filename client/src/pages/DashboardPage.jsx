@@ -7,9 +7,14 @@ import KPICards from '../components/dashboard/KPICards';
 import InventoryTrendChart from '../components/dashboard/InventoryTrendChart';
 import InventoryHealthFeed from '../components/dashboard/InventoryHealthFeed';
 import LowStockAlerts from '../components/dashboard/LowStockAlerts';
-
+import RecentOrders from "../components/dashboard/RecentOrders";
+import SubscriptionAlert from "../components/dashboard/SubscriptionAlert";
+import DailySalesSummary from "../components/dashboard/DailySalesSummary";
+import BusinessOverview from "../components/dashboard/BusinessOverview";
+import { AuthService } from "../api";
 const DashboardPage = () => {
   const navigate = useNavigate();
+  const company = AuthService.getCompany();
 
   const handleExportReport = () => {
     // For now, show a toast. In production, this would generate a PDF/CSV
@@ -22,7 +27,7 @@ const DashboardPage = () => {
       <Sidebar />
 
       {/* Main Content */}
-      <div className="flex-1 ml-0 lg:ml-[260px]">
+      <div className="flex-1 ml-0 lg:ml-65">
         {/* Top Header */}
         <Header />
 
@@ -39,7 +44,7 @@ const DashboardPage = () => {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <button 
+              <button
                 onClick={handleExportReport}
                 className="px-4 py-2 border border-[#DEE2E6] rounded-lg text-[14px] font-semibold text-[#212529] hover:bg-[#F8F9FA] transition-colors"
               >
@@ -48,17 +53,33 @@ const DashboardPage = () => {
             </div>
           </div>
 
+
+
+          <SubscriptionAlert />
+
           {/* KPI Cards */}
           <KPICards />
 
-          {/* Inventory Trend Chart */}
-          <InventoryTrendChart />
+{company?.plan === "Business" && (
+  <BusinessOverview />
+)}
 
-          {/* Inventory Health Feed */}
-          {/* <InventoryHealthFeed /> */}
+
+          {/* Daily Sales Summary */}
+          <DailySalesSummary />
+
 
           {/* Low Stock Alerts Table */}
           <LowStockAlerts />
+
+          {/* Inventory Trend Chart */}
+          <InventoryTrendChart />
+          {/* Recent Orders Table */}
+          <RecentOrders />
+          {/* Inventory Health Feed */}
+          {/* <InventoryHealthFeed /> */}
+
+
         </main>
       </div>
     </div>

@@ -4,9 +4,17 @@ import { MdChevronRight } from 'react-icons/md';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { getUserById, updateUser } from '../api';
+import {
+  AuthService,
+  getUserById,
+  updateUser,
+  getFranchiseLocations,
+} from "../api";
 
 const EditUserPage = () => {
+
+  const company = AuthService.getCompany();
+  const [locations, setLocations] = useState([]);
   const navigate = useNavigate();
   const { userId } = useParams();
   const [user, setUser] = useState(null);
@@ -14,25 +22,37 @@ const EditUserPage = () => {
   const [error, setError] = useState('');
   const [updatingUser, setUpdatingUser] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    role: 'staff',
+    name: "",
+    email: "",
+    phone: "",
+    role: "staff",
+    locationId: "",
   });
 
   useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        if (company?.plan === "Business") {
+          const response = await getFranchiseLocations();
+          setLocations(response.locations || []);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
     const fetchUser = async () => {
       try {
         setLoading(true);
         const response = await getUserById(userId);
-        
+
         if (response && response.user) {
           setUser(response.user);
           setFormData({
-            name: response.user.name || '',
-            email: response.user.email || '',
-            phone: response.user.phone || '',
-            role: response.user.role || 'staff',
+            name: response.user.name || "",
+            email: response.user.email || "",
+            phone: response.user.phone || "",
+            role: response.user.role || "staff",
+            locationId: response.user.locationId?._id || "",
           });
           setError('');
         }
@@ -45,19 +65,36 @@ const EditUserPage = () => {
     };
 
     if (userId) {
+      fetchLocations();
       fetchUser();
     }
   }, [userId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+      ...(name === "role" && value === "admin"
+        ? { locationId: "" }
+        : {}),
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!formData.name || !formData.email || !formData.phone) {
+
+    if (
+      !formData.name ||
+      !formData.email ||
+      !formData.phone ||
+      (
+        company?.plan === "Business" &&
+        formData.role !== "admin" &&
+        !formData.locationId
+      )
+    ) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -105,10 +142,10 @@ const EditUserPage = () => {
                 Update user details and permissions.
               </p>
             </div>
-            
+
             {/* Action Buttons */}
             <div className="flex items-center gap-3">
-              <button 
+              <button
                 onClick={handleCancel}
                 className="px-6 py-2 border border-[#DEE2E6] rounded-lg text-[14px] font-semibold text-[#212529] hover:bg-[#F8F9FA] transition-colors"
               >
@@ -141,7 +178,7 @@ const EditUserPage = () => {
               </div>
 
               <form onSubmit={handleSubmit} className="p-8 space-y-6">
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Name */}
                   <div>
                     <label className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6C757D] mb-2">
@@ -203,14 +240,42 @@ const EditUserPage = () => {
                       className="w-full h-11 bg-white border border-[#DEE2E6] rounded-lg px-4 text-[14px] text-[#212529] focus:outline-none focus:border-[#000000] transition-colors appearance-none cursor-pointer disabled:opacity-50"
                     >
                       <option value="staff">Staff</option>
+                      {company?.plan === "Business" && (
+                        <option value="manager">Manager</option>
+                      )}
                       <option value="admin">Admin</option>
                     </select>
                   </div>
+
+                  {company?.plan === "Business" &&
+                    formData.role !== "admin" && (
+                      <div>
+                        <label className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6C757D] mb-2">
+                          Location
+                        </label>
+
+                        <select
+                          name="locationId"
+                          value={formData.locationId}
+                          onChange={handleChange}
+                          disabled={updatingUser}
+                          className="w-full h-11 bg-white border border-[#DEE2E6] rounded-lg px-4 text-[14px]"
+                        >
+                          <option value="">Select Location</option>
+
+                          {locations.map((location) => (
+                            <option key={location._id} value={location._id}>
+                              {location.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                 </div>
 
                 {/* Action Buttons */}
                 <div className="flex items-center justify-end gap-3 pt-6 border-t border-[#DEE2E6]">
-                  <button 
+                  <button
                     type="button"
                     onClick={handleCancel}
                     disabled={updatingUser}
@@ -218,7 +283,7 @@ const EditUserPage = () => {
                   >
                     Cancel
                   </button>
-                  <button 
+                  <button
                     type="submit"
                     disabled={updatingUser}
                     className="px-8 py-2 bg-[#000000] text-white rounded-lg text-[14px] font-semibold hover:bg-[#1A1A1A] transition-colors flex items-center gap-2 disabled:opacity-50"

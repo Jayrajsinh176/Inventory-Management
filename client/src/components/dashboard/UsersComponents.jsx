@@ -1,8 +1,16 @@
 import { useState, useEffect } from 'react';
 import { MdPersonAdd, MdSearch, MdEdit, MdDelete } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
-import { getUsers, addUser, updateUser, deleteUser } from '../../api.js';
+import {
+  AuthService,
+  getUsers,
+  addUser,
+  updateUser,
+  deleteUser,
+  getFranchiseLocations,
+} from "../../api";
 import ConfirmationModal from '../common/ConfirmationModal';
+
 
 const UsersHeader = ({ onAddClick, loading }) => {
   return (
@@ -11,7 +19,7 @@ const UsersHeader = ({ onAddClick, loading }) => {
         <h1 className="text-[28px] font-bold text-[#212529] mb-2">Users</h1>
         <p className="text-[14px] text-[#6C757D]">Manage your team members and roles</p>
       </div>
-      <button 
+      <button
         onClick={onAddClick}
         disabled={loading}
         className="bg-[#000000] text-white px-6 py-2 rounded-lg font-semibold text-[14px] hover:bg-[#1A1A1A] transition-colors flex items-center gap-2 disabled:opacity-50"
@@ -25,6 +33,9 @@ const UsersHeader = ({ onAddClick, loading }) => {
 
 const UsersTable = ({ showAddForm, setShowAddForm }) => {
   const navigate = useNavigate();
+  const company = AuthService.getCompany();
+  const [franchises, setFranchises] = useState([]);
+const [newUserLocation, setNewUserLocation] = useState("");
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -42,9 +53,13 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
   const [deleteUserId, setDeleteUserId] = useState(null);
   const itemsPerPage = 10;
 
-  useEffect(() => {
-    fetchUsers();
-  }, [searchTerm, currentPage, roleFilter, statusFilter]);
+useEffect(() => {
+  fetchUsers();
+
+  if (company?.plan === "Business") {
+    fetchFranchises();
+  }
+}, [searchTerm, currentPage, roleFilter, statusFilter]);
 
   const fetchUsers = async () => {
     try {
@@ -54,9 +69,9 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
         page: currentPage,
         limit: itemsPerPage,
       });
-      
+
       let filteredUsers = response.data || [];
-      
+
       // Apply role filter
       if (roleFilter) {
         filteredUsers = filteredUsers.filter(user => {
@@ -64,7 +79,7 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
           return userRole.toLowerCase() === roleFilter.toLowerCase();
         });
       }
-      
+
       // Apply status filter
       if (statusFilter) {
         filteredUsers = filteredUsers.filter(user => {
@@ -72,7 +87,7 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
           return userStatus.toLowerCase() === statusFilter.toLowerCase();
         });
       }
-      
+
       setUsers(filteredUsers);
       setTotalCount(response.meta?.total || filteredUsers.length);
       setError(null);
@@ -84,25 +99,43 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
     }
   };
 
+  const fetchFranchises = async () => {
+  try {
+          const response = await getFranchiseLocations();
+          setFranchises(response.locations || []);
+  } catch (error) {
+    console.error(error);
+  }
+};
+
   const handleAddUser = async (e) => {
     e.preventDefault();
-    if (!newUserName || !newUserEmail || !newUserPhone) {
+  if (
+  !newUserName ||
+  !newUserEmail ||
+  !newUserPhone ||
+  (company?.plan === "Business" &&
+    newUserRole !== "admin" &&
+    !newUserLocation)
+) {
       setError('Please fill in all fields');
       return;
     }
 
     try {
       setAddingUser(true);
-      await addUser({
-        name: newUserName,
-        email: newUserEmail,
-        phone: newUserPhone,
-        role: newUserRole,
-      });
+     await addUser({
+  name: newUserName,
+  email: newUserEmail,
+  phone: newUserPhone,
+  role: newUserRole,
+  locationId: newUserLocation,
+});
       setNewUserName('');
       setNewUserEmail('');
       setNewUserPhone('');
       setNewUserRole('staff');
+      setNewUserLocation("");
       setShowAddForm(false);
       await fetchUsers();
       setError(null);
@@ -145,17 +178,27 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
 
   const getRoleBadge = (role) => {
     const roleUpper = role?.toUpperCase();
-    if (roleUpper === 'ADMIN') {
+
+    if (roleUpper === "ADMIN") {
       return {
-        bg: '#000000',
-        text: '#FFFFFF',
-        border: 'none',
+        bg: "#000000",
+        text: "#FFFFFF",
+        border: "none",
       };
     }
+
+    if (roleUpper === "MANAGER") {
+      return {
+        bg: "#E7F1FF",
+        text: "#0D6EFD",
+        border: "#0D6EFD",
+      };
+    }
+
     return {
-      bg: '#F1F3F5',
-      text: '#212529',
-      border: '1px solid #DEE2E6',
+      bg: "#F1F3F5",
+      text: "#212529",
+      border: "#DEE2E6",
     };
   };
 
@@ -238,9 +281,36 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
                   disabled={addingUser}
                 >
                   <option value="staff">Staff</option>
+
+                  {company?.plan === "Business" && (
+                    <option value="manager">Manager</option>
+                  )}
+
                   <option value="admin">Admin</option>
+
                 </select>
               </div>
+              {company?.plan === "Business" && newUserRole !== "admin" && (
+  <div>
+    <label className="block text-[13px] font-semibold text-[#212529] mb-2">
+      Location
+    </label>
+
+    <select
+      value={newUserLocation}
+      onChange={(e) => setNewUserLocation(e.target.value)}
+      className="w-full px-4 py-2 border border-[#DEE2E6] rounded-lg text-[14px]"
+    >
+      <option value="">Select Location</option>
+
+      {franchises.map((location) => (
+      <option key={location._id} value={location._id}>
+   {location.company_name} - {location.name}
+</option>
+      ))}
+    </select>
+  </div>
+)}
             </div>
             <div className="flex gap-2">
               <button
@@ -297,9 +367,16 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
               >
                 <option value="">All Roles</option>
                 <option value="admin">Admin</option>
+
+                {company?.plan === "Business" && (
+                  <option value="manager">Manager</option>
+                )}
+
                 <option value="staff">Staff</option>
               </select>
             </div>
+
+ 
 
             {/* Status Filter */}
             <div>
@@ -364,6 +441,9 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
                     Role
                   </th>
                   <th className="px-6 py-3 text-left text-[11px] uppercase font-semibold text-[#6C757D] tracking-wide">
+  Location
+</th>
+                  <th className="px-6 py-3 text-left text-[11px] uppercase font-semibold text-[#6C757D] tracking-wide">
                     Joined Date
                   </th>
                   <th className="px-6 py-3 text-right text-[11px] uppercase font-semibold text-[#6C757D] tracking-wide">
@@ -415,7 +495,11 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
                           {user.role?.toUpperCase()}
                         </span>
                       </td>
-
+<td className="px-6 py-4">
+  <p className="text-[14px] text-[#6C757D]">
+    {user.locationId?.name || "-"}
+  </p>
+</td>
                       {/* Joined Date */}
                       <td className="px-6 py-4">
                         <p className="text-[14px] text-[#6C757D]">
@@ -426,7 +510,7 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
                       {/* Actions */}
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <button 
+                          <button
                             onClick={() => handleEditUser(user._id || user.id)}
                             className="text-black hover:text-[#343A40] transition-colors"
                           >
@@ -471,11 +555,10 @@ const UsersTable = ({ showAddForm, setShowAddForm }) => {
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page)}
-                  className={`px-3 py-1 rounded text-[13px] transition-colors ${
-                    page === currentPage
+                  className={`px-3 py-1 rounded text-[13px] transition-colors ${page === currentPage
                       ? 'bg-[#000000] text-white'
                       : 'border border-[#DEE2E6] hover:bg-white'
-                  }`}
+                    }`}
                 >
                   {page}
                 </button>

@@ -14,7 +14,7 @@ import {
 } from 'chart.js';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import { MdTrendingUp, MdPieChart, MdLoop, MdInfoOutline } from 'react-icons/md';
-import { getStockMovementAnalysis, getCategoryPerformanceAnalysis, getReorderPatternsAnalysis } from '../../api';
+import { getStockMovementAnalysis, getCategoryPerformanceAnalysis, getReorderPatternsAnalysis, AuthService, } from '../../api';
 
 // Register Chart.js components
 ChartJS.register(
@@ -35,6 +35,8 @@ const InventoryTrendChart = () => {
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const company = AuthService.getCompany();
+  const currentPlan = company?.plan || "Basic";
 
   useEffect(() => {
     fetchData(activeAnalysis);
@@ -63,10 +65,16 @@ const InventoryTrendChart = () => {
       } else {
         setError(response.message || 'Failed to fetch analysis data');
       }
-    } catch (err) {
-      console.error('Chart data error:', err);
-      setError(err.message || 'Failed to load chart data');
-    } finally {
+  } catch (err) {
+  if (
+    err.message?.includes("Analytics is available only")
+  ) {
+    setError("UPGRADE_REQUIRED");
+  } else {
+    console.error("Chart data error:", err);
+    setError(err.message || "Failed to load chart data");
+  }
+} finally {
       setLoading(false);
     }
   };
@@ -99,7 +107,7 @@ const InventoryTrendChart = () => {
     if (!chartData) return '';
 
     switch (activeAnalysis) {
-      
+
       case 'category-performance':
         return `Total categories: ${chartData.totalCategoriesAnalyzed || 0} | Total inventory value: ₹${(chartData.totalInventoryValue || 0).toLocaleString('en-IN')}`;
       case 'stock-movement':
@@ -119,7 +127,7 @@ const InventoryTrendChart = () => {
       </div>
       <h4 className="text-[16px] font-semibold text-[#212529] mb-2">No Data Available</h4>
       <p className="text-[14px] text-[#6C757D] max-w-sm">
-        {activeAnalysis === 'category-performance' 
+        {activeAnalysis === 'category-performance'
           ? 'Add products to categories to see performance metrics.'
           : 'Add products and track inventory to see analytics data.'}
       </p>
@@ -186,7 +194,7 @@ const InventoryTrendChart = () => {
 
     // Line/Bar Chart for Stock Movement and Reorder Patterns
     const isStockMovement = activeAnalysis === 'stock-movement';
-    
+
     return {
       type: isStockMovement ? 'line' : 'bar',
       data: {
@@ -194,8 +202,8 @@ const InventoryTrendChart = () => {
         datasets: [{
           label: isStockMovement ? 'Units Sold' : 'Reorder Count',
           data: data.map(d => d.actualUnits || d.value || 0),
-          backgroundColor: isStockMovement 
-            ? 'rgba(0, 123, 255, 0.1)' 
+          backgroundColor: isStockMovement
+            ? 'rgba(0, 123, 255, 0.1)'
             : 'rgba(0, 123, 255, 0.8)',
           borderColor: '#007BFF',
           borderWidth: isStockMovement ? 3 : 0,
@@ -231,7 +239,7 @@ const InventoryTrendChart = () => {
               title: (context) => context[0].label,
               label: (context) => {
                 const value = context.raw || 0;
-                return isStockMovement 
+                return isStockMovement
                   ? `${value.toLocaleString()} units sold`
                   : `${value} reorders`;
               },
@@ -294,9 +302,40 @@ const InventoryTrendChart = () => {
 
   const { title, description, icon: Icon } = getTitleAndDescription();
 
-  if (error) {
+ if (error === "UPGRADE_REQUIRED") {
+  return (
+    <div className="bg-white rounded-lg border border-[#DEE2E6] p-8 shadow-md mb-8">
+      <div className="text-center">
+
+        <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-yellow-100 flex items-center justify-center">
+          <MdTrendingUp className="text-3xl text-yellow-600" />
+        </div>
+
+        <h2 className="text-2xl font-bold text-[#212529] mb-2">
+          Analytics Locked
+        </h2>
+
+        <p className="text-[#6C757D] mb-6">
+          Upgrade to the <strong>Standard</strong> or
+          <strong> Business</strong> plan to access
+          advanced analytics and reports.
+        </p>
+
+        <button
+          onClick={() => window.location.href = "/subscription"}
+          className="px-6 py-3 bg-[#007BFF] text-white rounded-lg font-semibold hover:bg-[#0056b3]"
+        >
+          Upgrade Plan
+        </button>
+
+      </div>
+    </div>
+  );
+}
+
+if (error) {
     return (
-      <div className="bg-white rounded-lg border border-[#DEE2E6] p-6 shadow-md mb-8">
+      <div className="bg-white rounded-lg border border-[#DEE2E6] p-6 shadow-md mb-8 mt-4">
         <div className="text-center py-8">
           <div className="w-16 h-16 bg-[#FEE2E2] rounded-full flex items-center justify-center mx-auto mb-4">
             <MdInfoOutline className="text-[32px] text-[#DC3545]" />
@@ -332,36 +371,55 @@ const InventoryTrendChart = () => {
       <div className="flex gap-2 mb-6 border-b border-[#DEE2E6] pb-4">
         <button
           onClick={() => setActiveAnalysis('stock-movement')}
-          className={`px-4 py-2 text-[13px] font-semibold rounded-lg transition-all flex items-center gap-2 ${
-            activeAnalysis === 'stock-movement'
-              ? 'bg-[#007BFF] text-white shadow-sm'
-              : 'bg-[#F8F9FA] text-[#212529] border border-[#DEE2E6] hover:bg-[#E9ECEF]'
-          }`}
+          className={`px-4 py-2 text-[13px] font-semibold rounded-lg transition-all flex items-center gap-2 ${activeAnalysis === 'stock-movement'
+            ? 'bg-[#007BFF] text-white shadow-sm'
+            : 'bg-[#F8F9FA] text-[#212529] border border-[#DEE2E6] hover:bg-[#E9ECEF]'
+            }`}
         >
           <MdTrendingUp className="text-[16px]" />
           Stock Movement
         </button>
         <button
-          onClick={() => setActiveAnalysis('category-performance')}
-          className={`px-4 py-2 text-[13px] font-semibold rounded-lg transition-all flex items-center gap-2 ${
-            activeAnalysis === 'category-performance'
-              ? 'bg-[#007BFF] text-white shadow-sm'
-              : 'bg-[#F8F9FA] text-[#212529] border border-[#DEE2E6] hover:bg-[#E9ECEF]'
-          }`}
+          disabled={currentPlan === "Basic"}
+          onClick={() => {
+            if (currentPlan !== "Basic") {
+              setActiveAnalysis("category-performance");
+            }
+          }}
+          className={`px-4 py-2 text-[13px] font-semibold rounded-lg transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${activeAnalysis === "category-performance"
+            ? "bg-[#007BFF] text-white shadow-sm"
+            : "bg-[#F8F9FA] text-[#212529] border border-[#DEE2E6] hover:bg-[#E9ECEF]"
+            }`}
         >
           <MdPieChart className="text-[16px]" />
           Category Performance
+
+          {currentPlan === "Basic" && (
+            <span className="ml-2 text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">
+              PRO
+            </span>
+          )}
         </button>
         <button
-          onClick={() => setActiveAnalysis('reorder-patterns')}
-          className={`px-4 py-2 text-[13px] font-semibold rounded-lg transition-all flex items-center gap-2 ${
-            activeAnalysis === 'reorder-patterns'
-              ? 'bg-[#007BFF] text-white shadow-sm'
-              : 'bg-[#F8F9FA] text-[#212529] border border-[#DEE2E6] hover:bg-[#E9ECEF]'
-          }`}
+          disabled={currentPlan !== "Business"}
+          onClick={() => {
+            if (currentPlan === "Business") {
+              setActiveAnalysis("reorder-patterns");
+            }
+          }}
+          className={`px-4 py-2 text-[13px] font-semibold rounded-lg transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${activeAnalysis === "reorder-patterns"
+              ? "bg-[#007BFF] text-white shadow-sm"
+              : "bg-[#F8F9FA] text-[#212529] border border-[#DEE2E6] hover:bg-[#E9ECEF]"
+            }`}
         >
           <MdLoop className="text-[16px]" />
           Reorder Patterns
+
+          {currentPlan !== "Business" && (
+            <span className="ml-2 text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+              BUSINESS
+            </span>
+          )}
         </button>
       </div>
 

@@ -16,9 +16,16 @@ const BillingPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState([]);
-  const [suggestions , setSuggestions] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
   const [showDropDown, setShowDropDown] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const [customerData, setCustomerData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    address: '',
+    notes: '',
+  });
 
   // Auto focus on input
   useEffect(() => {
@@ -28,8 +35,8 @@ const BillingPage = () => {
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target) && 
-          skuInputRef.current && !skuInputRef.current.contains(event.target)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
+        skuInputRef.current && !skuInputRef.current.contains(event.target)) {
         setShowDropDown(false);
       }
     };
@@ -142,7 +149,7 @@ const BillingPage = () => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       if (showDropDown && suggestions.length > 0) {
-        setHighlightedIndex((prev) => 
+        setHighlightedIndex((prev) =>
           prev < suggestions.length - 1 ? prev + 1 : prev
         );
       }
@@ -153,7 +160,7 @@ const BillingPage = () => {
     if (e.key === 'ArrowUp') {
       e.preventDefault();
       if (showDropDown && suggestions.length > 0) {
-        setHighlightedIndex((prev) => 
+        setHighlightedIndex((prev) =>
           prev > 0 ? prev - 1 : 0
         );
       }
@@ -228,7 +235,7 @@ const BillingPage = () => {
     if (quantity < 1) return;
 
     const product = products.find(p => p.id === productId);
-    
+
     if (product && quantity > product.stock) {
       setError(`Only ${product.stock} items available in stock`);
       return;
@@ -258,8 +265,19 @@ const BillingPage = () => {
       return;
     }
 
+    if (!customerData.name.trim() || !customerData.phone.trim()) {
+      setError('Customer name and mobile number are required.');
+      return;
+    }
+
     navigate('/billing/payment', {
-      state: { cartItems, subtotal, gst, total }
+      state: {
+        cartItems,
+        subtotal,
+        gst,
+        total,
+        customerData,
+      },
     });
   };
 
@@ -311,49 +329,45 @@ const BillingPage = () => {
                 />
                 {/* Suggestions Dropdown */}
                 {showDropDown && suggestions.length > 0 && (
-                <div 
-                  ref={dropdownRef}
-                  className="absolute left-6 right-6 top-[105px] bg-white border border-[#DEE2E6] rounded-lg shadow-xl z-50 overflow-hidden"
-                >
-                  {suggestions.map((product, index) => (
-                    <div
-                      key={product.id}
-                      onClick={() => selectProduct(product)}
-                      className={`px-4 py-3 cursor-pointer border-b last:border-b-0 transition-colors ${
-                        index === highlightedIndex 
-                          ? 'bg-[#000000] text-white' 
+                  <div
+                    ref={dropdownRef}
+                    className="absolute left-6 right-6 top-[105px] bg-white border border-[#DEE2E6] rounded-lg shadow-xl z-50 overflow-hidden"
+                  >
+                    {suggestions.map((product, index) => (
+                      <div
+                        key={product.id}
+                        onClick={() => selectProduct(product)}
+                        className={`px-4 py-3 cursor-pointer border-b last:border-b-0 transition-colors ${index === highlightedIndex
+                          ? 'bg-[#000000] text-white'
                           : 'hover:bg-[#F8F9FA] bg-white'
-                      }`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className={`text-[14px] font-semibold ${
-                            index === highlightedIndex ? 'text-white' : 'text-[#212529]'
-                          }`}>
-                            {product.name}
-                          </p>
-                          <p className={`text-[12px] ${
-                            index === highlightedIndex ? 'text-[#E9ECEF]' : 'text-[#6C757D]'
-                          }`}>
-                            {product.sku}
+                          }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className={`text-[14px] font-semibold ${index === highlightedIndex ? 'text-white' : 'text-[#212529]'
+                              }`}>
+                              {product.name}
+                            </p>
+                            <p className={`text-[12px] ${index === highlightedIndex ? 'text-[#E9ECEF]' : 'text-[#6C757D]'
+                              }`}>
+                              {product.sku}
+                            </p>
+                          </div>
+
+                          <p className={`text-[13px] font-semibold ${index === highlightedIndex ? 'text-white' : 'text-[#212529]'
+                            }`}>
+                            ₹{product.price}
                           </p>
                         </div>
-
-                        <p className={`text-[13px] font-semibold ${
-                          index === highlightedIndex ? 'text-white' : 'text-[#212529]'
-                        }`}>
-                          ₹{product.price}
-                        </p>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
                 {error && (
                   <p className="text-[12px] text-[#DC3545] mt-2">{error}</p>
                 )}
               </div>
-              
+
 
               {/* Cart Items */}
               <div className="bg-white rounded-lg border border-[#DEE2E6] overflow-hidden">
@@ -443,6 +457,88 @@ const BillingPage = () => {
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* Customer Details */}
+              <div className="bg-white rounded-lg border border-[#DEE2E6] overflow-hidden">
+                <div className="px-6 py-4 bg-[#F8F9FA] border-b border-[#DEE2E6]">
+                  <h2 className="text-[16px] font-semibold text-[#212529]">
+                    Customer Details
+                  </h2>
+                </div>
+
+                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                  <div>
+                    <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6C757D] mb-3">
+                      Customer Name
+                    </label>
+                    <input
+                      type="text"
+                      value={customerData.name}
+                      onChange={(e) =>
+                        setCustomerData(prev => ({ ...prev, name: e.target.value }))
+                      }
+                      className="w-full h-[48px] px-4 bg-[#F8F9FA] border-2 border-[#DEE2E6] rounded-lg"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6C757D] mb-3">
+                      Mobile Number
+                    </label>
+                    <input
+                      type="text"
+                      value={customerData.phone}
+                      onChange={(e) =>
+                        setCustomerData(prev => ({ ...prev, phone: e.target.value }))
+                      }
+                      className="w-full h-[48px] px-4 bg-[#F8F9FA] border-2 border-[#DEE2E6] rounded-lg"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6C757D] mb-3">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={customerData.email}
+                      onChange={(e) =>
+                        setCustomerData(prev => ({ ...prev, email: e.target.value }))
+                      }
+                      className="w-full h-[48px] px-4 bg-[#F8F9FA] border-2 border-[#DEE2E6] rounded-lg"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6C757D] mb-3">
+                      Address
+                    </label>
+                    <input
+                      type="text"
+                      value={customerData.address}
+                      onChange={(e) =>
+                        setCustomerData(prev => ({ ...prev, address: e.target.value }))
+                      }
+                      className="w-full h-[48px] px-4 bg-[#F8F9FA] border-2 border-[#DEE2E6] rounded-lg"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6C757D] mb-3">
+                      Notes
+                    </label>
+                    <textarea
+                      rows="3"
+                      value={customerData.notes}
+                      onChange={(e) =>
+                        setCustomerData(prev => ({ ...prev, notes: e.target.value }))
+                      }
+                      className="w-full px-4 py-3 bg-[#F8F9FA] border-2 border-[#DEE2E6] rounded-lg"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 

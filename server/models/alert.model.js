@@ -24,7 +24,8 @@ const alertSchema = new mongoose.Schema(
         "price_change",
         "vendor_order_request",
         "vendor_order_ready",
-        "vendor_payment_completed"
+        "vendor_payment_completed",
+        "subscription",
       ],
       default: "low_stock",
     },
@@ -61,7 +62,7 @@ const alertSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Compound index for efficient company-wide alert queries

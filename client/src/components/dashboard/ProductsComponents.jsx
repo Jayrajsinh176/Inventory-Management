@@ -1,15 +1,93 @@
-import { MdAdd, MdDelete, MdEdit, MdSearch } from 'react-icons/md';
+import {
+  MdAdd,
+  MdDelete,
+  MdEdit,
+  MdImage,
+  MdSearch,
+  MdInventory,
+} from "react-icons/md";
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import toast from 'react-hot-toast';
-import { deleteProduct, getCategories, getProducts } from '../../api';
+import { deleteProduct, getCategories, getProducts, getOrderStats } from '../../api';
 import ConfirmationModal from '../common/ConfirmationModal';
+import { AuthService } from "../../api";
+
+const company = AuthService.getCompany();
+const currentPlan = company?.plan || "Basic";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+const ProductThumbnail = ({ image, name }) => {
+  const [imageUnavailable, setImageUnavailable] = useState(false);
+  const imageUrl = image?.startsWith('http') ? image : `${API_BASE_URL}${image || ''}`;
+
+  if (!image || imageUnavailable) {
+    return (
+      <div
+        className="h-11 w-11 rounded-md border border-[#DEE2E6] bg-[#F8F9FA] flex items-center justify-center text-[#ADB5BD]"
+        title="No product image"
+      >
+        <MdImage className="text-[20px]" />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={imageUrl}
+      alt={`${name || 'Product'} thumbnail`}
+      onError={() => setImageUnavailable(true)}
+      className="h-11 w-11 rounded-md border border-[#DEE2E6] object-cover bg-[#F8F9FA]"
+    />
+  );
+};
 
 const ProductsHeader = () => {
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
 
   const handleAddProduct = () => {
     navigate('/products/add');
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleCSVUpload = async (e) => {
+    const file = e.target.files[0];
+
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/products/import`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${AuthService.getToken()}`,
+          },
+          body: formData,
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message);
+      }
+
+      toast.success(data.message);
+
+    } catch (error) {
+      toast.error(error.message);
+    }
+
+    e.target.value = "";
   };
 
   return (
@@ -23,13 +101,34 @@ const ProductsHeader = () => {
           Manage your architectural hardware and materials inventory.
         </p>
       </div>
-      <button
-        onClick={handleAddProduct}
-        className="bg-[#000000] text-white px-6 py-2 rounded-lg font-semibold text-[14px] hover:bg-[#1A1A1A] transition-colors flex items-center gap-2"
-      >
-        <MdAdd className="text-[18px]" />
-        Add Product
-      </button>
+      <div className="flex items-center gap-3">
+        {(currentPlan === "Standard" || currentPlan === "Business") && (
+          <>
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".csv"
+              hidden
+              onChange={handleCSVUpload}
+            />
+
+            <button
+              onClick={handleImportClick}
+              className="bg-[#000000] text-white px-6 py-2 rounded-lg font-semibold text-[14px] hover:bg-[#1A1A1A] transition-colors flex items-center gap-2"
+            >
+              Import CSV
+            </button>
+          </>
+        )}
+
+        <button
+          onClick={handleAddProduct}
+          className="bg-[#000000] text-white px-6 py-2 rounded-lg font-semibold text-[14px] hover:bg-[#1A1A1A] transition-colors flex items-center gap-2"
+        >
+          <MdAdd className="text-[18px]" />
+          Add Product
+        </button>
+      </div>
     </div>
   );
 };
@@ -45,17 +144,28 @@ const SummaryCards = ({ refreshKey = 0 }) => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await getProducts({ limit: 1000 });
-        if (response.products) {
-          const totalValue = response.products.reduce((sum, product) => sum + product.price * product.stock, 0);
-          const lowStockCount = response.products.filter((product) => product.stock < 10).length;
-          const totalRevenue = response.products.reduce((sum, product) => sum + product.price * product.stock, 0);
+        const productResponse = await getProducts({ limit: 1000 });
+        const orderResponse = await getOrderStats();
+
+        if (productResponse.products) {
+          const totalValue = productResponse.products.reduce(
+            (sum, product) =>
+              sum + Number(product.price) * Number(product.stock),
+            0
+          );
+
+          const lowStockCount = productResponse.products.filter(
+            (product) =>
+              Number(product.stock) <= Number(product.lowStockThreshold || 5)
+          ).length;
 
           setStats({
             inventoryValue: `₹${totalValue.toFixed(2)}`,
             lowStockAlerts: lowStockCount,
-            totalProducts: response.count || 0,
-            totalRevenue: `₹${totalRevenue.toFixed(2)}`,
+            totalProducts: productResponse.count || 0,
+            totalRevenue: `₹${(
+              orderResponse.stats?.totalRevenue || 0
+            ).toFixed(2)}`,
           });
         }
       } catch (error) {
@@ -105,6 +215,8 @@ const ProductsTable = ({ onProductsChanged }) => {
   const [categories, setCategories] = useState([]);
   const [editingStockId, setEditingStockId] = useState(null);
   const [editingStockValue, setEditingStockValue] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showAddStockModal, setShowAddStockModal] = useState(false);
   const limit = 10;
   const totalPages = Math.ceil(totalCount / limit);
   const visiblePageCount = Math.min(3, totalPages);
@@ -183,20 +295,39 @@ const ProductsTable = ({ onProductsChanged }) => {
     fetchProducts();
   }, [currentPage, searchTerm, categoryFilter, stockFilter]);
 
-  const getStatusColor = (stock) => {
-    if (stock > 5) {
-      return { bg: '#D4EDDA', text: '#155724', border: '#C3E6CB', status: 'IN STOCK' };
+  const getStatusColor = (stock, threshold) => {
+    if (stock === 0) {
+      return {
+        bg: "#F8D7DA",
+        text: "#721C24",
+        border: "#F5C6CB",
+        status: "OUT OF STOCK",
+      };
     }
 
-    if (stock > 0) {
-      return { bg: '#FFF3CD', text: '#856404', border: '#FFEEBA', status: 'LOW STOCK' };
+    if (stock <= threshold) {
+      return {
+        bg: "#FFF3CD",
+        text: "#856404",
+        border: "#FFEEBA",
+        status: "LOW STOCK",
+      };
     }
 
-    return { bg: '#F8D7DA', text: '#721C24', border: '#F5C6CB', status: 'OUT OF STOCK' };
+    return {
+      bg: "#D4EDDA",
+      text: "#155724",
+      border: "#C3E6CB",
+      status: "IN STOCK",
+    };
   };
 
   const handleEdit = (productId) => {
     navigate(`/products/edit/${productId}`);
+  };
+
+  const handleDetails = (productId) => {
+    navigate(`/products/${productId}/details`);
   };
 
   const handleDelete = (productId) => {
@@ -208,10 +339,14 @@ const ProductsTable = ({ onProductsChanged }) => {
     setEditingStockId(product.id);
     setEditingStockValue(product.stock.toString());
   };
+  const handleAddStock = (product) => {
+    setSelectedProduct(product);
+    setShowAddStockModal(true);
+  };
 
   const handleStockSave = (productId) => {
     const newStock = parseInt(editingStockValue, 10);
-    
+
     if (isNaN(newStock) || newStock < 0) {
       toast.error('Please enter a valid stock value (0 or more)');
       return;
@@ -226,7 +361,7 @@ const ProductsTable = ({ onProductsChanged }) => {
 
     setEditingStockId(null);
     setEditingStockValue('');
-    
+
     // When backend is ready, call updateProductStock(productId, newStock)
     console.log(`Stock updated for product ${productId} to ${newStock}`);
   };
@@ -353,6 +488,9 @@ const ProductsTable = ({ onProductsChanged }) => {
             <thead>
               <tr className="bg-[#F8F9FA] border-b-2 border-[#DEE2E6]">
                 <th className="px-6 py-3 text-left text-[11px] uppercase font-semibold text-[#6C757D] tracking-wide">
+                  Image
+                </th>
+                <th className="px-6 py-3 text-left text-[11px] uppercase font-semibold text-[#6C757D] tracking-wide">
                   Product Name
                 </th>
                 <th className="px-6 py-3 text-left text-[11px] uppercase font-semibold text-[#6C757D] tracking-wide">
@@ -378,25 +516,31 @@ const ProductsTable = ({ onProductsChanged }) => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-4 text-center text-[#6C757D]">
+                  <td colSpan="8" className="px-6 py-4 text-center text-[#6C757D]">
                     Loading products...
                   </td>
                 </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-4 text-center text-[#6C757D]">
+                  <td colSpan="8" className="px-6 py-4 text-center text-[#6C757D]">
                     No products found
                   </td>
                 </tr>
               ) : (
                 products.map((product) => {
-                  const statusInfo = getStatusColor(product.stock);
+                  const statusInfo = getStatusColor(
+                    product.stock,
+                    product.lowStockThreshold || 5
+                  );
 
                   return (
                     <tr
                       key={product.id}
                       className="border-b border-[#F1F3F5] hover:bg-[#F8F9FA] transition-colors duration-100"
                     >
+                      <td className="px-6 py-3">
+                        <ProductThumbnail image={product.image} name={product.name} />
+                      </td>
                       <td className="px-6 py-4">
                         <div>
                           <p className="text-[14px] font-semibold text-[#212529]">
@@ -471,11 +615,27 @@ const ProductsTable = ({ onProductsChanged }) => {
                           >
                             <MdEdit className="text-[20px]" />
                           </button>
+
                           <button
                             onClick={() => handleDelete(product.id)}
                             className="text-[#DC3545] hover:text-[#c82333] transition-colors"
                           >
                             <MdDelete className="text-[20px]" />
+                          </button>
+
+                          <button
+                            onClick={() => handleAddStock(product)}
+                            className="text-[#198754] hover:text-[#157347] transition-colors"
+                            title="Add Stock"
+                          >
+                            <MdInventory className="text-[20px]" />
+                          </button>
+
+                          <button
+                            onClick={() => handleDetails(product.id)}
+                            className="px-2 py-1 border border-[#DEE2E6] rounded text-[12px] font-semibold text-[#212529] hover:bg-[#F8F9FA] transition-colors"
+                          >
+                            Details
                           </button>
                         </div>
                       </td>
@@ -503,11 +663,10 @@ const ProductsTable = ({ onProductsChanged }) => {
               <button
                 key={page}
                 onClick={() => setCurrentPage(page)}
-                className={`px-3 py-1 rounded text-[13px] transition-colors ${
-                  page === currentPage
-                    ? 'bg-[#000000] text-white'
-                    : 'border border-[#DEE2E6] hover:bg-white'
-                }`}
+                className={`px-3 py-1 rounded text-[13px] transition-colors ${page === currentPage
+                  ? 'bg-[#000000] text-white'
+                  : 'border border-[#DEE2E6] hover:bg-white'
+                  }`}
               >
                 {page}
               </button>

@@ -23,13 +23,17 @@ const AddProductForm = ({ product = null, onSubmitSuccess = null }) => {
   const [loading, setLoading] = useState(false);
   const isEditMode = !!product;
   const [formData, setFormData] = useState({
-    name: product?.name || '',
-    sku: product?.sku || '',
-    category: getCategoryValue(product?.category),
-    vendor: product?.vendor?._id || product?.vendor || '',
-    price: product?.price ? String(product.price) : '',
-    stock: product?.stock ? String(product.stock) : '',
-  });
+  name: product?.name || '',
+  sku: product?.sku || '',
+  category: getCategoryValue(product?.category),
+  vendor: product?.vendor?._id || product?.vendor || '',
+  price: product?.price ? String(product.price) : '',
+  stock: product?.stock ? String(product.stock) : '',
+    lowStockThreshold: product?.lowStockThreshold
+    ? String(product.lowStockThreshold)
+    : '5',
+  image: null,
+});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -57,19 +61,23 @@ const AddProductForm = ({ product = null, onSubmitSuccess = null }) => {
   useEffect(() => {
     if (product) {
       setFormData({
-        name: product.name || '',
-        sku: product.sku || '',
-        category: getCategoryValue(product.category),
-        vendor: product.vendor?._id || product.vendor || '',
-        price: product.price ? String(product.price) : '',
-        stock: product.stock ? String(product.stock) : '',
-      });
+  name: product.name || '',
+  sku: product.sku || '',
+  category: getCategoryValue(product.category),
+  vendor: product.vendor?._id || product.vendor || '',
+  price: product.price ? String(product.price) : '',
+  stock: product.stock ? String(product.stock) : '',
+    lowStockThreshold: product.lowStockThreshold
+    ? String(product.lowStockThreshold)
+    : '5',
+  image: null,
+});
     }
   }, [product]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    if (name === 'price' || name === 'stock') {
+    if (name === 'price' || name === 'stock'|| name === 'lowStockThreshold') {
       // Allow empty string or valid numbers
       if (value === '' || !isNaN(value)) {
         setFormData((prev) => ({
@@ -82,6 +90,33 @@ const AddProductForm = ({ product = null, onSubmitSuccess = null }) => {
     }
   };
 
+  const handleImageChange = (e) => {
+  const file = e.target.files[0];
+
+  if (!file) {
+    setFormData((prev) => ({ ...prev, image: null }));
+    return;
+  }
+
+  const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!allowedImageTypes.includes(file.type)) {
+    toast.error('Please select a JPG, PNG, or WEBP image');
+    e.target.value = '';
+    return;
+  }
+
+  if (file.size > 2 * 1024 * 1024) {
+    toast.error('Product image must be 2 MB or smaller');
+    e.target.value = '';
+    return;
+  }
+
+  setFormData((prev) => ({
+    ...prev,
+    image: file || null,
+  }));
+};
+
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     
@@ -93,11 +128,36 @@ const AddProductForm = ({ product = null, onSubmitSuccess = null }) => {
     setLoading(true);
 
     try {
-      const productPayload = {
-        ...formData,
-        price: formData.price === '' ? 0 : parseFloat(formData.price),
-        stock: formData.stock === '' ? 0 : parseFloat(formData.stock),
-      };
+      const productPayload = new FormData();
+
+productPayload.append("name", formData.name);
+productPayload.append("sku", formData.sku);
+productPayload.append("category", formData.category);
+productPayload.append("vendor", formData.vendor);
+productPayload.append(
+  "price",
+  formData.price === ""
+    ? 0
+    : parseFloat(formData.price)
+);
+productPayload.append(
+  "stock",
+  formData.stock === ""
+    ? 0
+    : parseFloat(formData.stock)
+);
+productPayload.append(
+  "lowStockThreshold",
+  formData.lowStockThreshold === ""
+    ? 5
+    : parseInt(formData.lowStockThreshold, 10)
+);
+if (formData.image) {
+  productPayload.append(
+    "image",
+    formData.image
+  );
+}
 
       if (isEditMode) {
         const response = await updateProduct(product.id, productPayload);
@@ -113,13 +173,15 @@ const AddProductForm = ({ product = null, onSubmitSuccess = null }) => {
           toast.success('Product created successfully!');
           // Reset form
           setFormData({
-            name: '',
-            sku: '',
-            category: '',
-            vendor: '',
-            price: '',
-            stock: '',
-          });
+  name: '',
+  sku: '',
+  category: '',
+  vendor: '',
+  price: '',
+  stock: '',
+  lowStockThreshold: '5',
+  image: null,
+});
           if (onSubmitSuccess) {
             onSubmitSuccess();
           }
@@ -231,6 +293,36 @@ const AddProductForm = ({ product = null, onSubmitSuccess = null }) => {
                 ))}
               </select>
             </div>
+
+            <div className="col-span-2">
+  <label className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6C757D] mb-2">
+    Product Image
+  </label>
+
+  <input
+    type="file"
+    accept="image/jpeg,image/png,image/webp"
+    onChange={handleImageChange}
+    disabled={loading}
+    className="w-full h-11 border border-[#DEE2E6] rounded-lg px-3 py-2"
+  />
+
+  {product?.image && !formData.image && (
+    <img
+      src={`${import.meta.env.VITE_API_URL}${product.image}`}
+      alt="Product"
+      className="mt-3 h-24 w-24 object-cover rounded-lg border"
+    />
+  )}
+
+  {formData.image && (
+    <img
+      src={URL.createObjectURL(formData.image)}
+      alt="Preview"
+      className="mt-3 h-24 w-24 object-cover rounded-lg border"
+    />
+  )}
+</div>
           </div>
         </div>
       </div>
@@ -290,12 +382,16 @@ const AddProductForm = ({ product = null, onSubmitSuccess = null }) => {
               <label className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6C757D] mb-2">
                 Low Stock Threshold
               </label>
-              <input
-                type="number"
-                placeholder="5"
-                min="0"
-                className="w-full h-11 bg-white border border-[#DEE2E6] rounded-lg px-4 text-[14px] placeholder-[#ADB5BD] focus:outline-none focus:border-[#000000] focus:ring-1 focus:ring-[#000000] transition-colors disabled:opacity-50"
-              />
+      <input
+  type="number"
+  name="lowStockThreshold"
+  value={formData.lowStockThreshold}
+  onChange={handleChange}
+  placeholder="5"
+  min="0"
+  disabled={loading}
+  className="w-full h-11 bg-white border border-[#DEE2E6] rounded-lg px-4 text-[14px] placeholder-[#ADB5BD] focus:outline-none focus:border-[#000000] focus:ring-1 focus:ring-[#000000] transition-colors disabled:opacity-50"
+/>
             </div>
           </div>
         </div>

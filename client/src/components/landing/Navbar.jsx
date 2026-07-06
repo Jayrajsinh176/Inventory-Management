@@ -75,7 +75,7 @@ const Navbar = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: 32 }} className="hidden-mobile">
           {[
             { label: 'Features', id: 'features' },
-            { label: 'Pricing', id: 'pricing' },
+            // { label: 'Pricing', id: 'pricing' },
             { label: 'How It Works', id: 'how-it-works' },
             { label: 'For Teams', id: 'built-for' },
           ].map(({ label, id }) => (
@@ -205,7 +205,7 @@ const Navbar = () => {
         <div style={{ backgroundColor: '#fff', borderTop: '1px solid #eaeef2', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           {[
             { label: 'Features', id: 'features' },
-            { label: 'Pricing', id: 'pricing' },
+            // { label: 'Pricing', id: 'pricing' },
             { label: 'How It Works', id: 'how-it-works' },
             { label: 'For Teams', id: 'built-for' },
           ].map(({ label, id }) => (

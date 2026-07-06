@@ -1,20 +1,21 @@
 import mongoose from 'mongoose';
 
 const subscriptionSchema = new mongoose.Schema({
-    userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
-    companyId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Company',
-        required: true
-    },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+},
+
+companyId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Company",
+    required: true,
+},
     plan: {
         type: String,
-        enum: ['basic', 'pro', 'business', 'trial'],
-        default: 'basic'
+        enum: ['Basic', 'Standard', 'Business', 'Trial'],
+        default: 'Basic'
     },
     status: {
         type: String,
@@ -30,6 +31,8 @@ const subscriptionSchema = new mongoose.Schema({
         required: true
     },
 });
+const Subscription =
+  mongoose.models.Subscription ||
+  mongoose.model("Subscription", subscriptionSchema);
 
-const Subscription = mongoose.model('Subscription', subscriptionSchema);
 export default Subscription;

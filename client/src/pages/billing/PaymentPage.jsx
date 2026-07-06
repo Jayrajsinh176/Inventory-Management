@@ -8,7 +8,7 @@ import { PAYMENT_METHODS } from '../../constants/pos';
 const PaymentPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { cartItems, subtotal, gst, total } = location.state || {};
+  const { cartItems, subtotal, gst, total, customerData } = location.state || {};
 
   const [selectedMethod, setSelectedMethod] = useState(PAYMENT_METHODS.ONLINE);
 
@@ -25,6 +25,7 @@ const PaymentPage = () => {
         subtotal,
         gst,
         total,
+        customerData,
         paymentMethod: selectedMethod
       }
     });
@@ -64,20 +65,18 @@ const PaymentPage = () => {
               {/* Online Payment */}
               <div
                 onClick={() => setSelectedMethod(PAYMENT_METHODS.ONLINE)}
-                className={`p-6 border-2 rounded-lg cursor-pointer transition-all ${
-                  selectedMethod === PAYMENT_METHODS.ONLINE
+                className={`p-6 border-2 rounded-lg cursor-pointer transition-all ${selectedMethod === PAYMENT_METHODS.ONLINE
                     ? 'border-[#000000] bg-[#F8F9FA]'
                     : 'border-[#DEE2E6] hover:border-[#ADB5BD]'
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-4">
                   {/* Radio Button */}
                   <div
-                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                      selectedMethod === PAYMENT_METHODS.ONLINE
+                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${selectedMethod === PAYMENT_METHODS.ONLINE
                         ? 'border-[#000000] bg-[#000000]'
                         : 'border-[#DEE2E6]'
-                    }`}
+                      }`}
                   >
                     {selectedMethod === PAYMENT_METHODS.ONLINE && (
                       <span className="w-2 h-2 bg-white rounded-full"></span>
@@ -100,20 +99,18 @@ const PaymentPage = () => {
               {/* Cash Payment */}
               <div
                 onClick={() => setSelectedMethod(PAYMENT_METHODS.CASH)}
-                className={`p-6 border-2 rounded-lg cursor-pointer transition-all ${
-                  selectedMethod === PAYMENT_METHODS.CASH
+                className={`p-6 border-2 rounded-lg cursor-pointer transition-all ${selectedMethod === PAYMENT_METHODS.CASH
                     ? 'border-[#000000] bg-[#F8F9FA]'
                     : 'border-[#DEE2E6] hover:border-[#ADB5BD]'
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-4">
                   {/* Radio Button */}
                   <div
-                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                      selectedMethod === PAYMENT_METHODS.CASH
+                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${selectedMethod === PAYMENT_METHODS.CASH
                         ? 'border-[#000000] bg-[#000000]'
                         : 'border-[#DEE2E6]'
-                    }`}
+                      }`}
                   >
                     {selectedMethod === PAYMENT_METHODS.CASH && (
                       <span className="w-2 h-2 bg-white rounded-full"></span>

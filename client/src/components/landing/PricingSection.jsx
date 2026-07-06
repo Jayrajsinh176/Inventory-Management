@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 const plans = [
   {
     name: 'Basic',
-    price: '$0',
+    price: '₹499',
     period: '/mo',
     features: [
       { text: '50 Products', included: true },
@@ -15,8 +15,8 @@ const plans = [
     featured: false,
   },
   {
-    name: 'Pro',
-    price: '$29',
+    name: 'Standard',
+    price: '₹999',
     period: '/mo',
     features: [
       { text: '500 Products', included: true },
@@ -24,13 +24,13 @@ const plans = [
       { text: 'Low Stock Alerts', included: true },
       { text: 'API Access', included: true },
     ],
-    cta: 'Select Pro',
+    cta: 'Select Standard',
     featured: true,
     badge: 'Recommended',
   },
   {
     name: 'Business',
-    price: '$79',
+    price: '₹2999',
     period: '/mo',
     features: [
       { text: 'Unlimited Products', included: true },

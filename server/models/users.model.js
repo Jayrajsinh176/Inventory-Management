@@ -4,10 +4,16 @@ import bcrypt from "bcryptjs";
 const userSchema = new mongoose.Schema(
   {
     company: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Company",
-      required: true,
-    },
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "Company",
+  required: true,
+},
+
+locationId: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "Franchise",
+  default: null,
+},
 
     name: {
       type: String,
@@ -38,6 +44,16 @@ const userSchema = new mongoose.Schema(
       minlength: 6,
       select: false, 
     },
+
+    temporaryPassword: {
+  type: String,
+  default: null,
+},
+
+mustChangePassword: {
+  type: Boolean,
+  default: true,
+},
 
     isEmailVerified: {
       type: Boolean,
@@ -80,10 +96,10 @@ const userSchema = new mongoose.Schema(
     },
 
     role: {
-      type: String,
-      enum: ["admin", "staff"],
-      default: "staff",
-    },
+  type: String,
+  enum: ["admin", "manager", "staff"],
+  default: "staff",
+},
     status: {
       value: {
         type: String,

@@ -1,5 +1,5 @@
 // API Base URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 /**
  * Auth Service - handles token and user data storage
@@ -7,43 +7,43 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 export const AuthService = {
   // Token Management
   setToken: (token) => {
-    localStorage.setItem('authToken', token);
+    localStorage.setItem("authToken", token);
   },
 
   getToken: () => {
-    return localStorage.getItem('authToken');
+    return localStorage.getItem("authToken");
   },
 
   // User Data Management
   setUser: (user) => {
-    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem("user", JSON.stringify(user));
   },
 
   getUser: () => {
-    const user = localStorage.getItem('user');
+    const user = localStorage.getItem("user");
     return user ? JSON.parse(user) : null;
   },
 
   // Company Data Management
   setCompany: (company) => {
-    localStorage.setItem('company', JSON.stringify(company));
+    localStorage.setItem("company", JSON.stringify(company));
   },
 
   getCompany: () => {
-    const company = localStorage.getItem('company');
+    const company = localStorage.getItem("company");
     return company ? JSON.parse(company) : null;
   },
 
   // Clear all auth data
   clearAuth: () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-    localStorage.removeItem('company');
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("user");
+    localStorage.removeItem("company");
   },
 
   // Check if authenticated
   isAuthenticated: () => {
-    return !!localStorage.getItem('authToken');
+    return !!localStorage.getItem("authToken");
   },
 
   // Get auth header for API calls
@@ -60,9 +60,9 @@ export const AuthService = {
  */
 export async function registerUser(formData) {
   const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
     body: JSON.stringify(formData),
   });
@@ -70,7 +70,7 @@ export async function registerUser(formData) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Registration Failed');
+    throw new Error(data.message || "Registration Failed");
   }
 
   // Store auth data
@@ -102,9 +102,9 @@ export async function loginUser(email, phone, password) {
   }
 
   const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
     body: JSON.stringify(credentials),
   });
@@ -112,7 +112,7 @@ export async function loginUser(email, phone, password) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Login failed');
+    throw new Error(data.message || "Login failed");
   }
 
   // Store auth data
@@ -145,19 +145,19 @@ export async function getProducts(options = {}) {
   const params = new URLSearchParams();
   if (options.page !== undefined) {
     const page = Number.parseInt(options.page, 10);
-    params.append('page', Number.isNaN(page) ? 1 : Math.max(1, page));
+    params.append("page", Number.isNaN(page) ? 1 : Math.max(1, page));
   }
   if (options.limit !== undefined) {
     const limit = Number.parseInt(options.limit, 10);
-    params.append('limit', Number.isNaN(limit) ? 10 : Math.max(1, limit));
+    params.append("limit", Number.isNaN(limit) ? 10 : Math.max(1, limit));
   }
-  if (options.category) params.append('category', options.category);
-  if (options.search) params.append('search', options.search);
+  if (options.category) params.append("category", options.category);
+  if (options.search) params.append("search", options.search);
 
   const response = await fetch(`${API_BASE_URL}/api/products?${params}`, {
-    method: 'GET',
+    method: "GET",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...AuthService.getAuthHeader(),
     },
   });
@@ -165,7 +165,7 @@ export async function getProducts(options = {}) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to fetch products');
+    throw new Error(data.message || "Failed to fetch products");
   }
 
   return data;
@@ -178,9 +178,9 @@ export async function getProducts(options = {}) {
  */
 export async function getProductById(productId) {
   const response = await fetch(`${API_BASE_URL}/api/products/${productId}`, {
-    method: 'GET',
+    method: "GET",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...AuthService.getAuthHeader(),
     },
   });
@@ -188,7 +188,7 @@ export async function getProductById(productId) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to fetch product');
+    throw new Error(data.message || "Failed to fetch product");
   }
 
   return data;
@@ -200,19 +200,22 @@ export async function getProductById(productId) {
  * @returns {Promise<Object>} Created product data
  */
 export async function createProduct(productData) {
+  const isMultipart = productData instanceof FormData;
   const response = await fetch(`${API_BASE_URL}/api/products`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      // The browser supplies the multipart boundary for FormData. Setting this
+      // header ourselves prevents Multer from reading the file and fields.
+      ...(isMultipart ? {} : { "Content-Type": "application/json" }),
       ...AuthService.getAuthHeader(),
     },
-    body: JSON.stringify(productData),
+    body: isMultipart ? productData : JSON.stringify(productData),
   });
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to create product');
+    throw new Error(data.message || "Failed to create product");
   }
 
   return data;
@@ -225,19 +228,20 @@ export async function createProduct(productData) {
  * @returns {Promise<Object>} Updated product data
  */
 export async function updateProduct(productId, productData) {
+  const isMultipart = productData instanceof FormData;
   const response = await fetch(`${API_BASE_URL}/api/products/${productId}`, {
-    method: 'PUT',
+    method: "PUT",
     headers: {
-      'Content-Type': 'application/json',
+      ...(isMultipart ? {} : { "Content-Type": "application/json" }),
       ...AuthService.getAuthHeader(),
     },
-    body: JSON.stringify(productData),
+    body: isMultipart ? productData : JSON.stringify(productData),
   });
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to update product');
+    throw new Error(data.message || "Failed to update product");
   }
 
   return data;
@@ -250,9 +254,9 @@ export async function updateProduct(productId, productData) {
  */
 export async function deleteProduct(productId) {
   const response = await fetch(`${API_BASE_URL}/api/products/${productId}`, {
-    method: 'DELETE',
+    method: "DELETE",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...AuthService.getAuthHeader(),
     },
   });
@@ -260,7 +264,7 @@ export async function deleteProduct(productId) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to delete product');
+    throw new Error(data.message || "Failed to delete product");
   }
 
   return data;
@@ -276,9 +280,9 @@ export async function deleteProduct(productId) {
  */
 export async function getCategories() {
   const response = await fetch(`${API_BASE_URL}/api/category`, {
-    method: 'GET',
+    method: "GET",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...AuthService.getAuthHeader(),
     },
   });
@@ -286,7 +290,7 @@ export async function getCategories() {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to fetch categories');
+    throw new Error(data.message || "Failed to fetch categories");
   }
 
   return data;
@@ -299,9 +303,9 @@ export async function getCategories() {
  */
 export async function createCategory(categoryData) {
   const response = await fetch(`${API_BASE_URL}/api/category`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...AuthService.getAuthHeader(),
     },
     body: JSON.stringify(categoryData),
@@ -310,7 +314,7 @@ export async function createCategory(categoryData) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to create category');
+    throw new Error(data.message || "Failed to create category");
   }
 
   return data;
@@ -324,9 +328,9 @@ export async function createCategory(categoryData) {
  */
 export async function updateCategory(categoryId, categoryData) {
   const response = await fetch(`${API_BASE_URL}/api/category/${categoryId}`, {
-    method: 'PUT',
+    method: "PUT",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...AuthService.getAuthHeader(),
     },
     body: JSON.stringify(categoryData),
@@ -335,7 +339,7 @@ export async function updateCategory(categoryId, categoryData) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to update category');
+    throw new Error(data.message || "Failed to update category");
   }
 
   return data;
@@ -348,9 +352,9 @@ export async function updateCategory(categoryId, categoryData) {
  */
 export async function deleteCategory(categoryId) {
   const response = await fetch(`${API_BASE_URL}/api/category/${categoryId}`, {
-    method: 'DELETE',
+    method: "DELETE",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...AuthService.getAuthHeader(),
     },
   });
@@ -358,7 +362,7 @@ export async function deleteCategory(categoryId) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to delete category');
+    throw new Error(data.message || "Failed to delete category");
   }
 
   return data;
@@ -375,14 +379,14 @@ export async function deleteCategory(categoryId) {
  */
 export async function getUsers(options = {}) {
   const params = new URLSearchParams();
-  if (options.page !== undefined) params.append('page', options.page);
-  if (options.limit !== undefined) params.append('limit', options.limit);
-  if (options.search) params.append('search', options.search);
+  if (options.page !== undefined) params.append("page", options.page);
+  if (options.limit !== undefined) params.append("limit", options.limit);
+  if (options.search) params.append("search", options.search);
 
   const response = await fetch(`${API_BASE_URL}/api/users?${params}`, {
-    method: 'GET',
+    method: "GET",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...AuthService.getAuthHeader(),
     },
   });
@@ -390,7 +394,7 @@ export async function getUsers(options = {}) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to fetch users');
+    throw new Error(data.message || "Failed to fetch users");
   }
 
   return data;
@@ -403,9 +407,9 @@ export async function getUsers(options = {}) {
  */
 export async function getUserById(userId) {
   const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
-    method: 'GET',
+    method: "GET",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...AuthService.getAuthHeader(),
     },
   });
@@ -413,7 +417,7 @@ export async function getUserById(userId) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to fetch user');
+    throw new Error(data.message || "Failed to fetch user");
   }
 
   return data;
@@ -426,9 +430,9 @@ export async function getUserById(userId) {
  */
 export async function addUser(userData) {
   const response = await fetch(`${API_BASE_URL}/api/users`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...AuthService.getAuthHeader(),
     },
     body: JSON.stringify(userData),
@@ -437,7 +441,7 @@ export async function addUser(userData) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to add user');
+    throw new Error(data.message || "Failed to add user");
   }
 
   return data;
@@ -451,9 +455,9 @@ export async function addUser(userData) {
  */
 export async function updateUser(userId, userData) {
   const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
-    method: 'PUT',
+    method: "PUT",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...AuthService.getAuthHeader(),
     },
     body: JSON.stringify(userData),
@@ -462,7 +466,7 @@ export async function updateUser(userId, userData) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to update user');
+    throw new Error(data.message || "Failed to update user");
   }
 
   return data;
@@ -475,9 +479,9 @@ export async function updateUser(userId, userData) {
  */
 export async function deleteUser(userId) {
   const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
-    method: 'DELETE',
+    method: "DELETE",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...AuthService.getAuthHeader(),
     },
   });
@@ -485,7 +489,7 @@ export async function deleteUser(userId) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to delete user');
+    throw new Error(data.message || "Failed to delete user");
   }
 
   return data;
@@ -501,9 +505,9 @@ export async function deleteUser(userId) {
  */
 export async function getProductStats() {
   const response = await fetch(`${API_BASE_URL}/api/products/stats`, {
-    method: 'GET',
+    method: "GET",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...AuthService.getAuthHeader(),
     },
   });
@@ -511,7 +515,7 @@ export async function getProductStats() {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to fetch product stats');
+    throw new Error(data.message || "Failed to fetch product stats");
   }
 
   return data;
@@ -523,9 +527,9 @@ export async function getProductStats() {
  */
 export async function getLowStockProducts() {
   const response = await fetch(`${API_BASE_URL}/api/products/low-stock`, {
-    method: 'GET',
+    method: "GET",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...AuthService.getAuthHeader(),
     },
   });
@@ -533,7 +537,7 @@ export async function getLowStockProducts() {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to fetch low stock products');
+    throw new Error(data.message || "Failed to fetch low stock products");
   }
 
   return data;
@@ -548,18 +552,21 @@ export async function getLowStockProducts() {
  * @returns {Promise<Object>} Stock movement data with monthly breakdown
  */
 export async function getStockMovementAnalysis() {
-  const response = await fetch(`${API_BASE_URL}/api/products/analytics/stock-movement`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      ...AuthService.getAuthHeader(),
+  const response = await fetch(
+    `${API_BASE_URL}/api/analytics/stock-movement`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
     },
-  });
+  );
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to fetch stock movement analysis');
+    throw new Error(data.message || "Failed to fetch stock movement analysis");
   }
 
   return data;
@@ -570,18 +577,23 @@ export async function getStockMovementAnalysis() {
  * @returns {Promise<Object>} Category performance data with inventory values
  */
 export async function getCategoryPerformanceAnalysis() {
-  const response = await fetch(`${API_BASE_URL}/api/products/analytics/category-performance`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      ...AuthService.getAuthHeader(),
+  const response = await fetch(
+    `${API_BASE_URL}/api/analytics/category-performance`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
     },
-  });
+  );
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to fetch category performance analysis');
+    throw new Error(
+      data.message || "Failed to fetch category performance analysis",
+    );
   }
 
   return data;
@@ -592,18 +604,23 @@ export async function getCategoryPerformanceAnalysis() {
  * @returns {Promise<Object>} Reorder patterns data with monthly frequency
  */
 export async function getReorderPatternsAnalysis() {
-  const response = await fetch(`${API_BASE_URL}/api/products/analytics/reorder-patterns`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      ...AuthService.getAuthHeader(),
+  const response = await fetch(
+    `${API_BASE_URL}/api/analytics/reorder-patterns`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
     },
-  });
+  );
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to fetch reorder patterns analysis');
+    throw new Error(
+      data.message || "Failed to fetch reorder patterns analysis",
+    );
   }
 
   return data;
@@ -615,60 +632,147 @@ export async function getReorderPatternsAnalysis() {
  */
 export async function getPlans() {
   const response = await fetch(`${API_BASE_URL}/api/company/plan`, {
-    method: 'GET',
+    method: "GET",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...AuthService.getAuthHeader(),
     },
   });
 
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to fetch plans');
+    throw new Error(data.message || "Failed to fetch plans");
   }
 
-  return data;
+  return {
+    ...data,
+    data: (data.data || []).map((plan) => ({
+      ...plan,
+      support: plan.support || "Email support and knowledge base",
+    })),
+  };
 }
 
-/** 
+/**
  * Get current subscription details
  * @returns {Promise<Object>} Current subscription details
  */
 export async function getCurrentSubscription() {
-  const response = await fetch(`${API_BASE_URL}/api/company/subscription`,{
-    method: 'GET',
+  const response = await fetch(`${API_BASE_URL}/api/company/subscription`, {
+    method: "GET",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...AuthService.getAuthHeader(),
     },
   });
-  
+
   const data = await response.json();
-  console.log('Current Subscription : ', data);
-  if(!response.ok){
-    throw new Error(data.message || 'Failed to fetch current subscription details');
+  if (!response.ok) {
+    throw new Error(
+      data.message || "Failed to fetch current subscription details",
+    );
   }
   return data;
 }
 
-/** 
+/**
+ * Get subscription history
+ * @returns {Promise<Object>} Subscription history records
+ */
+export async function getSubscriptionHistory() {
+  const response = await fetch(`${API_BASE_URL}/api/subscription/history`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...AuthService.getAuthHeader(),
+    },
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch subscription history");
+  }
+
+  return data;
+}
+
+/**
  * update subscription plan
  * @param {string} planId - Plan ID to subscribe
  * @returns {Promise<Object>} Subscription update confirmation
  */
 export const updateSubscriptionPlan = async (planId) => {
-  const response = await fetch(`${API_BASE_URL}/api/company/subscription`,{
-    method: 'PATCH',
+  const response = await fetch(`${API_BASE_URL}/api/company/subscription`, {
+    method: "PATCH",
     headers: {
-      'Content-Type' : 'application/json',
+      "Content-Type": "application/json",
       ...AuthService.getAuthHeader(),
     },
     body: JSON.stringify({ planId }),
   });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to update subscription plan");
+  }
+
+  // Update localStorage immediately
+  if (data.company) {
+    AuthService.setCompany(data.company);
+  }
+
+  return data;
+};
+
+/**
+ * Cancel current company subscription and downgrade to basic
+ */
+export async function cancelCompanySubscription() {
+  const response = await fetch(
+    `${API_BASE_URL}/api/company/subscription/cancel`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
+    },
+  );
+ const data = await response.json();
+
+if (!response.ok) {
+  throw new Error(data.message || "Failed to cancel subscription");
+}
+
+if (data.company) {
+  AuthService.setCompany(data.company);
+}
+
+return data;
+}
+
+/**
+ * Get company profile
+ */
+export async function getCompanyProfile() {
+  const response = await fetch(`${API_BASE_URL}/api/company`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...AuthService.getAuthHeader(),
+    },
+  });
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to update subscription plan');
+    throw new Error(data.message || "Failed to fetch company profile");
   }
+
+  // Some endpoints may return a wrapped response.
+  if (data && data.success && data.company) {
+    return data.company;
+  }
+
   return data;
 }
 // ============================================
@@ -681,9 +785,9 @@ export const updateSubscriptionPlan = async (planId) => {
  */
 export async function getVendors() {
   const response = await fetch(`${API_BASE_URL}/api/vendor`, {
-    method: 'GET',
+    method: "GET",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...AuthService.getAuthHeader(),
     },
   });
@@ -691,7 +795,7 @@ export async function getVendors() {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to fetch vendors');
+    throw new Error(data.message || "Failed to fetch vendors");
   }
 
   return data;
@@ -704,9 +808,9 @@ export async function getVendors() {
  */
 export async function getVendorById(vendorId) {
   const response = await fetch(`${API_BASE_URL}/api/vendor/${vendorId}`, {
-    method: 'GET',
+    method: "GET",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...AuthService.getAuthHeader(),
     },
   });
@@ -714,7 +818,7 @@ export async function getVendorById(vendorId) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to fetch vendor details');
+    throw new Error(data.message || "Failed to fetch vendor details");
   }
 
   return data;
@@ -726,18 +830,21 @@ export async function getVendorById(vendorId) {
  * @returns {Promise<Object>} List of products from this vendor
  */
 export async function getVendorProducts(vendorId) {
-  const response = await fetch(`${API_BASE_URL}/api/vendor/${vendorId}/products`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      ...AuthService.getAuthHeader(),
+  const response = await fetch(
+    `${API_BASE_URL}/api/vendor/${vendorId}/products`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
     },
-  });
+  );
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to fetch vendor products');
+    throw new Error(data.message || "Failed to fetch vendor products");
   }
 
   return data;
@@ -749,18 +856,21 @@ export async function getVendorProducts(vendorId) {
  * @returns {Promise<Object>} List of orders completed with this vendor
  */
 export async function getVendorOrders(vendorId) {
-  const response = await fetch(`${API_BASE_URL}/api/vendor/${vendorId}/orders`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      ...AuthService.getAuthHeader(),
+  const response = await fetch(
+    `${API_BASE_URL}/api/vendor/${vendorId}/orders`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
     },
-  });
+  );
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to fetch vendor orders');
+    throw new Error(data.message || "Failed to fetch vendor orders");
   }
 
   return data;
@@ -773,9 +883,9 @@ export async function getVendorOrders(vendorId) {
  */
 export async function createVendor(vendorData) {
   const response = await fetch(`${API_BASE_URL}/api/vendor`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...AuthService.getAuthHeader(),
     },
     body: JSON.stringify(vendorData),
@@ -784,7 +894,7 @@ export async function createVendor(vendorData) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to create vendor');
+    throw new Error(data.message || "Failed to create vendor");
   }
 
   return data;
@@ -798,9 +908,9 @@ export async function createVendor(vendorData) {
  */
 export async function updateVendor(vendorId, vendorData) {
   const response = await fetch(`${API_BASE_URL}/api/vendor/${vendorId}`, {
-    method: 'PUT',
+    method: "PUT",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...AuthService.getAuthHeader(),
     },
     body: JSON.stringify(vendorData),
@@ -809,7 +919,7 @@ export async function updateVendor(vendorId, vendorData) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to update vendor');
+    throw new Error(data.message || "Failed to update vendor");
   }
 
   return data;
@@ -822,19 +932,22 @@ export async function updateVendor(vendorId, vendorData) {
  * @returns {Promise<Object>} Created request payload
  */
 export async function createVendorSupplyRequest(vendorId, payload) {
-  const response = await fetch(`${API_BASE_URL}/api/vendor/${vendorId}/supply-requests`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...AuthService.getAuthHeader(),
+  const response = await fetch(
+    `${API_BASE_URL}/api/vendor/${vendorId}/supply-requests`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
+      body: JSON.stringify(payload),
     },
-    body: JSON.stringify(payload),
-  });
+  );
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to create supply request');
+    throw new Error(data.message || "Failed to create supply request");
   }
 
   return data;
@@ -848,20 +961,23 @@ export async function createVendorSupplyRequest(vendorId, payload) {
  */
 export async function getVendorSupplyRequests(vendorId, status) {
   const query = new URLSearchParams();
-  if (status) query.set('status', status);
+  if (status) query.set("status", status);
 
-  const response = await fetch(`${API_BASE_URL}/api/vendor/${vendorId}/supply-requests?${query.toString()}`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      ...AuthService.getAuthHeader(),
+  const response = await fetch(
+    `${API_BASE_URL}/api/vendor/${vendorId}/supply-requests?${query.toString()}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
     },
-  });
+  );
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to fetch supply requests');
+    throw new Error(data.message || "Failed to fetch supply requests");
   }
 
   return data;
@@ -874,18 +990,21 @@ export async function getVendorSupplyRequests(vendorId, status) {
  * @returns {Promise<Object>} Supply request
  */
 export async function getVendorSupplyRequestById(vendorId, requestId) {
-  const response = await fetch(`${API_BASE_URL}/api/vendor/${vendorId}/supply-requests/${requestId}`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      ...AuthService.getAuthHeader(),
+  const response = await fetch(
+    `${API_BASE_URL}/api/vendor/${vendorId}/supply-requests/${requestId}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
     },
-  });
+  );
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to fetch supply request details');
+    throw new Error(data.message || "Failed to fetch supply request details");
   }
 
   return data;
@@ -898,20 +1017,27 @@ export async function getVendorSupplyRequestById(vendorId, requestId) {
  * @param {Object} payload
  * @returns {Promise<Object>} Updated request
  */
-export async function updateVendorSupplyRequestStatus(vendorId, requestId, payload) {
-  const response = await fetch(`${API_BASE_URL}/api/vendor/${vendorId}/supply-requests/${requestId}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      ...AuthService.getAuthHeader(),
+export async function updateVendorSupplyRequestStatus(
+  vendorId,
+  requestId,
+  payload,
+) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/vendor/${vendorId}/supply-requests/${requestId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
+      body: JSON.stringify(payload),
     },
-    body: JSON.stringify(payload),
-  });
+  );
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to update supply request status');
+    throw new Error(data.message || "Failed to update supply request status");
   }
 
   return data;
@@ -925,19 +1051,355 @@ export async function updateVendorSupplyRequestStatus(vendorId, requestId, paylo
  * @returns {Promise<Object>} Payment confirmation
  */
 export async function payVendorSupplyRequest(vendorId, requestId, payload) {
-  const response = await fetch(`${API_BASE_URL}/api/vendor/${vendorId}/supply-requests/${requestId}/pay`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...AuthService.getAuthHeader(),
+  const response = await fetch(
+    `${API_BASE_URL}/api/vendor/${vendorId}/supply-requests/${requestId}/pay`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
+      body: JSON.stringify(payload || {}),
     },
-    body: JSON.stringify(payload || {}),
-  });
+  );
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Failed to complete payment');
+    throw new Error(data.message || "Failed to complete payment");
+  }
+
+  return data;
+}
+
+// ============================================
+// ORDERS API
+// ============================================
+
+export async function getOrderStats() {
+  const response = await fetch(
+    `${API_BASE_URL}/api/orders/stats/overview`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch order stats");
+  }
+
+  return data;
+}
+
+export async function getOrders(options = {}) {
+  const params = new URLSearchParams();
+
+  if (options.page !== undefined) params.append("page", options.page);
+  if (options.limit !== undefined) params.append("limit", options.limit);
+  if (options.search) params.append("search", options.search);
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/orders?${params.toString()}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch orders");
+  }
+
+  return data;
+}
+
+export async function getSubscriptionAlert() {
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/subscription/alert`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message);
+  }
+
+  return data;
+}
+
+export async function getDailySalesSummary() {
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/orders/daily-summary`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message);
+  }
+
+  return data;
+}
+export async function getProductDetails(productId, options = {}) {
+  const params = new URLSearchParams();
+
+  if (options.page !== undefined) params.append("page", options.page);
+  if (options.limit !== undefined) params.append("limit", options.limit);
+  if (options.search) params.append("search", options.search);
+  if (options.date) params.append("date", options.date);
+  if (options.sort) params.append("sort", options.sort);
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/products/${productId}/details?${params}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch product details");
+  }
+
+  return data;
+}
+
+// ============================================
+// BILLING API
+// ============================================
+
+export async function getBillingHistory(params = {}) {
+  const queryString = new URLSearchParams(params).toString();
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/billing/history?${queryString}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch billing history");
+  }
+
+  return data;
+}
+
+export async function getBillingSummary() {
+  const response = await fetch(
+    `${API_BASE_URL}/api/billing/summary`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch billing summary");
+  }
+
+  return data;
+}
+
+/**
+ * Get Business Dashboard Overview
+ * @returns {Promise<Object>} Business dashboard statistics
+ */
+export async function getBusinessOverview() {
+  const response = await fetch(
+    `${API_BASE_URL}/api/analytics/business-overview`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.message || "Failed to fetch business overview"
+    );
+  }
+
+  return data;
+}
+
+// ============================================
+// FRANCHISE API
+// ============================================
+
+export async function createFranchise(franchiseData) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/franchises`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
+      body: JSON.stringify(franchiseData),
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to create franchise");
+  }
+
+  return data;
+}
+
+export async function getFranchises() {
+  const response = await fetch(
+    `${API_BASE_URL}/api/franchises`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch franchises");
+  }
+
+  return data;
+}
+
+export async function getFranchiseById(id) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/franchises/${id}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch franchise");
+  }
+
+  return data;
+}
+
+export async function updateFranchise(id, franchiseData) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/franchises/${id}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
+      body: JSON.stringify(franchiseData),
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to update franchise");
+  }
+
+  return data;
+}
+
+export async function toggleFranchiseStatus(id) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/franchises/${id}/status`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.message || "Failed to update franchise status"
+    );
+  }
+
+  return data;
+}
+
+export async function getFranchiseLocations() {
+  const response = await fetch(
+    `${API_BASE_URL}/api/franchises/locations`,
+    {
+      headers: {
+        ...AuthService.getAuthHeader(),
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.message || "Failed to fetch franchise locations"
+    );
   }
 
   return data;

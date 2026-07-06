@@ -10,7 +10,7 @@ import { AuthService } from '../../api';
 const ReviewPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { cartItems, subtotal, gst, total, paymentMethod } = location.state || {};
+  const { cartItems, subtotal, gst, total, paymentMethod, customerData } = location.state || {};
 
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -46,10 +46,11 @@ const ReviewPage = () => {
           total,
           paymentMethod,
           paymentStatus: 'paid',
-          customerName: 'Walk-in Customer',
-          customerPhone: '',
-          customerEmail: '',
-          notes: 'Created from POS billing flow',
+          customerName: customerData?.name,
+          customerPhone: customerData?.phone,
+          customerEmail: customerData?.email,
+          customerAddress: customerData?.address,
+          notes: customerData?.notes,
         }),
       });
 
@@ -83,7 +84,7 @@ const ReviewPage = () => {
 
   const handleBack = () => {
     navigate('/billing/payment', {
-      state: { cartItems, subtotal, gst, total }
+    state: {cartItems,subtotal,gst,total,customerData,paymentMethod,}
     });
   };
 

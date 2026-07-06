@@ -2,14 +2,34 @@ import mongoose, { get } from "mongoose";
 import Product from "../models/product.model.js";
 import Category from "../models/category.model.js";
 import Company from "../models/company.model.js";
+import Order from "../models/order.model.js";
+import SupplyRequest from "../models/supplyRequest.model.js";
+import LocationStock from "../models/locationStock.model.js";
+import Franchise from "../models/franchise.model.js";
 import { logActivity } from "../utils/logActivity.js";
 import {
   canAddProductToPlan,
   formatPlanProductLimit,
   getSubscriptionPlan,
 } from "../utils/subscription.js";
+import fs from "fs";
+import csv from "csv-parser";
+
 
 const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
+
+// JSON requests carry numbers as numbers; multipart form fields are strings.
+// Accept both forms while rejecting blank, invalid, and non-finite values.
+const parseOptionalNumber = (value, fieldName) => {
+  if (value === undefined || value === null || value === "") return undefined;
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(parsed)) {
+    const error = new Error(`${fieldName} must be a number`);
+    error.status = 400;
+    throw error;
+  }
+  return parsed;
+};
 
 const escapeRegex = (value) => {
   if (typeof value !== "string") return "";
@@ -36,15 +56,23 @@ const buildProductPayload = (product) => ({
   company: product.company,
   name: product.name,
   sku: product.sku,
+  image: product.image,
+  barcode: product.barcode,
   category: buildCategoryPayload(product.category),
   vendor: product.vendor || null,
   price: product.price,
+  mrp: product.mrp,
+  dp: product.dp,
+  bv: product.bv,
   stock: product.stock,
   createdAt: product.createdAt,
   updatedAt: product.updatedAt,
 });
 
 const handleProductError = (res, error) => {
+  if (error.status === 400) {
+    return res.status(400).json({ message: error.message });
+  }
   if (error.name === "ValidationError") {
     const errors = Object.values(error.errors || {}).map((item) => item.message);
     return res.status(400).json({
@@ -81,8 +109,8 @@ const getScopedCategory = async (categoryId, companyId) => {
  */
 export const getProducts = async (req, res) => {
   try {
-    const query = { 
-      company: new mongoose.Types.ObjectId(req.user.company) 
+    const query = {
+      company: new mongoose.Types.ObjectId(req.user.company)
     };
 
     if (req.query.category) {
@@ -107,7 +135,7 @@ export const getProducts = async (req, res) => {
       .populate("category", "name")
       .populate("vendor", "name")
       .sort({ createdAt: -1 })
-      .skip((page-1)*limit)
+      .skip((page - 1) * limit)
       .limit(limit)
       .lean();
 
@@ -129,9 +157,9 @@ export const getProducts = async (req, res) => {
 export const getProductById = async (req, res) => {
   try {
     if (!isValidObjectId(req.params.id)) {
-      return res.status(400).json({ 
-        success : false,
-        message: "Invalid product id" 
+      return res.status(400).json({
+        success: false,
+        message: "Invalid product id"
       });
     }
 
@@ -141,9 +169,9 @@ export const getProductById = async (req, res) => {
     }).populate("category", "name").populate("vendor", "name").lean();
 
     if (!product) {
-      return res.status(404).json({ 
-        success : false,
-        message: "Product not found" 
+      return res.status(404).json({
+        success: false,
+        message: "Product not found"
       });
     }
 
@@ -164,51 +192,70 @@ export const getProductById = async (req, res) => {
  */
 export const createProduct = async (req, res) => {
   try {
-    let { name, sku, category, price, stock, vendor } = req.body;
+    let {
+      name,
+      sku,
+      barcode,
+      category,
+      price,
+      mrp,
+      dp,
+      bv,
+      stock,
+      vendor,
+      lowStockThreshold,
+    } = req.body;
 
     name = name?.trim();
     sku = sku?.trim().toUpperCase();
 
-    if (!name || !sku || !category || price === undefined) {
+    if (
+      !name ||
+      !sku ||
+      !category ||
+      price === undefined
+    ) {
       return res.status(400).json({
-        success : false,
-        message: "Name, SKU, category, and price are required",
+        success: false,
+        message:
+          "Name, SKU, Category and Price are required",
       });
     }
 
     if (!isValidObjectId(category)) {
-      return res.status(400).json({ 
-        success : false,
-        message: "Invalid category id" 
+      return res.status(400).json({
+        success: false,
+        message: "Invalid category id"
       });
     }
 
     if (vendor && !isValidObjectId(vendor)) {
-      return res.status(400).json({ 
-        success : false,
-        message: "Invalid vendor id" 
+      return res.status(400).json({
+        success: false,
+        message: "Invalid vendor id"
       });
     }
 
-    if (typeof price !== "number") {
-      return res.status(400).json({ 
-        success : false,
-        message: "Price must be a number" 
+    price = parseOptionalNumber(price, "Price");
+    stock = parseOptionalNumber(stock, "Stock");
+
+    lowStockThreshold = parseOptionalNumber(
+      lowStockThreshold,
+      "Low Stock Threshold"
+    );
+    if (price === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "Price must be a number"
       });
     }
 
-    if (stock !== undefined && typeof stock !== "number") {
-      return res.status(400).json({ 
-        success : false,
-        message: "Stock must be a number" 
-      });
-    }
     const company = await Company.findById(req.user.company).select("plan");
 
     if (!company) {
-      return res.status(404).json({ 
-        success : false,
-        message: "Company not found" 
+      return res.status(404).json({
+        success: false,
+        message: "Company not found"
       });
     }
 
@@ -216,28 +263,56 @@ export const createProduct = async (req, res) => {
     if (!canAddProductToPlan(company.plan, productCount)) {
       const plan = getSubscriptionPlan(company.plan);
       return res.status(403).json({
-        success : false,
+        success: false,
         message: `${plan.label} plan allows up to ${formatPlanProductLimit(company.plan)} products. Upgrade your plan to add more products.`,
       });
     }
 
     const existingCategory = await getScopedCategory(category, req.user.company);
     if (!existingCategory) {
-      return res.status(404).json({ 
-        success : false,
-        message: "Category not found for this company" 
+      return res.status(404).json({
+        success: false,
+        message: "Category not found for this company"
       });
     }
+
+    const image = req.file
+      ? `/uploads/products/${req.file.filename}`
+      : "";
 
     const product = await Product.create({
       company: req.user.company,
       name,
       sku,
+      // The schema's barcode index is global. Generate a company-specific value
+      // when no barcode was supplied so identical SKUs in different companies do
+      // not collide.
+      barcode: barcode?.trim() || `${req.user.company}-${sku}`,
       category,
       price,
+      mrp: mrp ?? price,
+      dp: dp ?? price,
+      bv: bv ?? 0,
       stock: stock ?? 0,
       vendor: vendor || null,
+      image,
+      lowStockThreshold: lowStockThreshold ?? 5,
     });
+
+    // Create initial stock for Main Store
+const mainStore = await Franchise.findOne({
+  company: req.user.company,
+  isDefault: true,
+});
+
+if (mainStore) {
+  await LocationStock.create({
+    company: req.user.company,
+    locationId: mainStore._id,
+    product: product._id,
+    stock: stock ?? 0,
+  });
+}
 
     await product.populate("category", "name");
 
@@ -256,7 +331,7 @@ export const createProduct = async (req, res) => {
     });
 
     return res.status(201).json({
-      success : true,
+      success: true,
       message: "Product created successfully",
       product: buildProductPayload(product),
       subscription: {
@@ -291,7 +366,15 @@ export const updateProduct = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    const allowedFields = ["name", "sku", "category", "price", "stock", "vendor"];
+    const allowedFields = [
+      "name",
+      "sku",
+      "category",
+      "price",
+      "stock",
+      "vendor",
+      "lowStockThreshold",
+    ];
     const updateFields = Object.keys(req.body).filter((field) =>
       allowedFields.includes(field)
     );
@@ -302,8 +385,13 @@ export const updateProduct = async (req, res) => {
       });
     }
 
-    const { name, sku, category, price, stock, vendor } = req.body;
-
+    const { name, sku, category, vendor } = req.body;
+    const price = parseOptionalNumber(req.body.price, "Price");
+    const stock = parseOptionalNumber(req.body.stock, "Stock");
+    const lowStockThreshold = parseOptionalNumber(
+      req.body.lowStockThreshold,
+      "Low Stock Threshold"
+    );
     if (category !== undefined) {
       if (!isValidObjectId(category)) {
         return res.status(400).json({ message: "Invalid category id" });
@@ -343,20 +431,30 @@ export const updateProduct = async (req, res) => {
       product.name = trimmed;
     }
 
-    if (price !== undefined) {
-      if (typeof price !== "number") {
+    if (req.body.price !== undefined) {
+      if (price === undefined) {
         return res.status(400).json({ message: "Price must be a number" });
       }
 
       product.price = price;
     }
 
-    if (stock !== undefined) {
-      if (typeof stock !== "number") { 
+    if (req.body.stock !== undefined) {
+      if (stock === undefined) {
         return res.status(400).json({ message: "Stock must be a number" });
       }
 
       product.stock = stock;
+    }
+
+    if (req.body.lowStockThreshold !== undefined) {
+      if (lowStockThreshold === undefined) {
+        return res.status(400).json({
+          message: "Low Stock Threshold must be a number",
+        });
+      }
+
+      product.lowStockThreshold = lowStockThreshold;
     }
 
     if (vendor !== undefined) {
@@ -364,6 +462,11 @@ export const updateProduct = async (req, res) => {
         return res.status(400).json({ message: "Invalid vendor id" });
       }
       product.vendor = vendor || null;
+    }
+
+    if (req.file) {
+      product.image =
+        `/uploads/products/${req.file.filename}`;
     }
 
     await product.save();
@@ -443,21 +546,18 @@ function getInventoryValue(products) {
   }, 0);
 }
 
-function getLowStockProducts(products){
-  return products.filter((product)=>{
+function getLowStockProducts(products) {
+  return products.filter((product) => {
     const stock = Number(product.stock) || 0;
-    return stock < (product.lowStockThreshold || 10);
+    return stock <= (product.lowStockThreshold || 10);
   })
 }
 
-function getTotalProducts(products){
-  return products.reduce((total, product) => {
-    const stock = Number(product.stock) || 0;
-    return total + (stock);
-  }, 0);
+function getTotalProducts(products) {
+  return products.length;
 }
 
-function getAveragePrice(products){
+function getAveragePrice(products) {
   let productPrice = products.reduce((total, product) => {
     const price = Number(product.price) || 0;
     return total + (price);
@@ -470,7 +570,7 @@ function getAveragePrice(products){
   return productStock > 0 ? productPrice / productStock : 0;
 }
 
-function getOutOfStockCount(products){
+function getOutOfStockCount(products) {
   return products.reduce((total, product) => {
     const stock = Number(product.stock) || 0;
     return total + (stock === 0 ? 1 : 0);
@@ -485,30 +585,30 @@ function getOutOfStockCount(products){
 
 export const getProductStats = async (req, res) => {
   try {
-    let query = { company : new mongoose.Types.ObjectId(req.user.company)}
+    let query = { company: new mongoose.Types.ObjectId(req.user.company) }
     // console.log(query);
     let products = await Product.find(query).lean();
     // console.log(products);
 
 
     return res.status(200).json({
-      success : true,
-      stats : {
-        "inventoryValue" : getInventoryValue(products),
-        "lowStocksAlerts" : getLowStockProducts(products).length,
-        "lowStockProduct" : getLowStockProducts(products),
-        "totalProducts" : getTotalProducts(products),
-        "averagePrice" : getAveragePrice(products).toFixed(2),
-        "outOfStockCount" : getOutOfStockCount(products),
-      
+      success: true,
+      stats: {
+        "inventoryValue": getInventoryValue(products),
+        "lowStocksAlerts": getLowStockProducts(products).length,
+        "lowStockProduct": getLowStockProducts(products),
+        "totalProducts": getTotalProducts(products),
+        "averagePrice": getAveragePrice(products).toFixed(2),
+        "outOfStockCount": getOutOfStockCount(products),
+
       }
     });
-  }catch(error){
+  } catch (error) {
     console.log(error);
     return res.status(500).json({
-      message : "Internal server error this is from stats route",
+      message: "Internal server error this is from stats route",
     });
-  
+
   }
 };
 
@@ -520,23 +620,23 @@ export const getProductStats = async (req, res) => {
 
 export const getLowStock = async (req, res) => {
   try {
-    let query = { company : new mongoose.Types.ObjectId(req.user.company)};
+    let query = { company: new mongoose.Types.ObjectId(req.user.company) };
     let products = await Product.find(query).lean();
     return res.status(200).json({
-      success : true,
-      "low-stock-products" : getLowStockProducts(products),
-      "count" : getLowStockProducts(products).length,
+      success: true,
+      "low-stock-products": getLowStockProducts(products),
+      "count": getLowStockProducts(products).length,
     })
   } catch (error) {
     console.log(error);
     return res.status(500).json({
-      message : "Internal server error"
+      message: "Internal server error"
     });
   }
 
 }
 
-function getCategoryName(categoryId,companyId) {
+function getCategoryName(categoryId, companyId) {
   if (!isValidObjectId(categoryId)) {
     return null;
   }
@@ -560,237 +660,35 @@ export const getProductsByCategory = async (req, res) => {
     if (!isValidObjectId(req.params.categoryId)) {
       return res.status(400).json({
         sucess: false,
-        message : "Invalid Category Id"
+        message: "Invalid Category Id"
       });
     }
     let query = {
-      company : new mongoose.Types.ObjectId(req.user.company),
-      category : new mongoose.Types.ObjectId(req.params.categoryId)
+      company: new mongoose.Types.ObjectId(req.user.company),
+      category: new mongoose.Types.ObjectId(req.params.categoryId)
     }
     let products = await Product.find(query).lean();
     return res.status(200).json({
-      success : true,
-      products : products,
-      count : products.length,
-      categoryName : await getCategoryName(query.category,query.company),
+      success: true,
+      products: products,
+      count: products.length,
+      categoryName: await getCategoryName(query.category, query.company),
     });
   } catch (error) {
     console.log(error);
     return res.status(500).json({
-      success : false,
-      message : "Internal server error"
+      success: false,
+      message: "Internal server error"
     });
   }
 }
 
-/**
- * @description get stock movement analysis (units sold per month)
- * @route GET /api/analytics/stock-movement
- * @access Protected
- */
-export const getStockMovementAnalysis = async (req, res) => {
-  try {
-    const companyId = new mongoose.Types.ObjectId(req.user.company);
-    const products = await Product.find({ company: companyId }).lean();
-
-    // Generate 6 months of data based on current date
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-    const currentDate = new Date();
-    const analysisData = [];
-
-    // Get inventory value first
-    const totalInventoryValue = getInventoryValue(products);
-
-    for (let i = 5; i >= 0; i--) {
-      const monthIndex = (currentDate.getMonth() - i + 12) % 12;
-      const month = months[monthIndex];
-      
-      // If no products, use base values
-      if (products.length === 0 || totalInventoryValue === 0) {
-        analysisData.push({
-          month,
-          value: Math.floor(65 + Math.random() * 20), // Random between 65-85
-          actualUnits: Math.floor(650 + Math.random() * 200),
-        });
-      } else {
-        // Calculate units sold based on price and stock movement patterns
-        const baseSales = Math.floor(totalInventoryValue * (0.25 + Math.random() * 0.15) / 100);
-        const variance = Math.floor(baseSales * (-0.15 + Math.random() * 0.3));
-        const unitsSold = Math.max(50, baseSales + variance);
-
-        analysisData.push({
-          month,
-          value: Math.floor(unitsSold / 10), // Scale down for visualization
-          actualUnits: unitsSold,
-        });
-      }
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Stock movement analysis fetched successfully",
-      data: analysisData,
-      totalProductsAnalyzed: products.length,
-      totalInventoryValue: totalInventoryValue || 0,
-    });
-  } catch (error) {
-    console.error('Stock Movement Analysis Error:', error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
-
-/**
- * @description get category performance analysis (inventory value by category)
- * @route GET /api/analytics/category-performance
- * @access Protected
- */
-export const getCategoryPerformanceAnalysis = async (req, res) => {
-  try {
-    const companyId = new mongoose.Types.ObjectId(req.user.company);
-    
-    // Get all products with category info
-    const products = await Product.find({ company: companyId })
-      .populate('category', 'name')
-      .lean();
-
-    // Filter products with valid categories
-    const validProducts = products.filter(p => p.category && p.category._id);
-
-    if (validProducts.length === 0) {
-      return res.status(200).json({
-        success: true,
-        message: "No products with categories found",
-        data: [],
-        totalCategoriesAnalyzed: 0,
-        totalInventoryValue: 0,
-      });
-    }
-
-    // Group by category and calculate total value
-    const categoryMap = {};
-    validProducts.forEach(product => {
-      const categoryId = product.category._id.toString();
-      const categoryName = product.category.name || 'Uncategorized';
-      const productValue = (product.price || 0) * (product.stock || 0);
-
-      if (!categoryMap[categoryId]) {
-        categoryMap[categoryId] = {
-          category: categoryName,
-          value: 0,
-          productCount: 0,
-          averagePrice: 0,
-        };
-      }
-
-      categoryMap[categoryId].value += productValue;
-      categoryMap[categoryId].productCount += 1;
-    });
-
-    // Calculate average price per category
-    Object.keys(categoryMap).forEach(categoryId => {
-      const category = categoryMap[categoryId];
-      const categoryProducts = validProducts.filter(p => p.category._id.toString() === categoryId);
-      if (categoryProducts.length > 0) {
-        category.averagePrice = 
-          categoryProducts.reduce((sum, p) => sum + (p.price || 0), 0) / categoryProducts.length;
-      }
-    });
-
-    // Sort by value (descending) and prepare response
-    const analysisData = Object.values(categoryMap)
-      .sort((a, b) => b.value - a.value)
-      .map(cat => ({
-        category: cat.category,
-        value: Math.round((cat.value / 1000) * 10) / 10, // Scale for visualization
-        actualValue: Math.round(cat.value),
-        productCount: cat.productCount,
-        averagePrice: Math.round(cat.averagePrice * 100) / 100,
-      }));
-
-    const totalValue = analysisData.reduce((sum, cat) => sum + cat.actualValue, 0);
-
-    return res.status(200).json({
-      success: true,
-      message: "Category performance analysis fetched successfully",
-      data: analysisData,
-      totalCategoriesAnalyzed: analysisData.length,
-      totalInventoryValue: Math.round(totalValue * 100) / 100,
-    });
-  } catch (error) {
-    console.error('Category Performance Analysis Error:', error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
-
-/**
- * @description get reorder patterns analysis (reorder frequency)
- * @route GET /api/analytics/reorder-patterns
- * @access Protected
- */
-export const getReorderPatternsAnalysis = async (req, res) => {
-  try {
-    const companyId = new mongoose.Types.ObjectId(req.user.company);
-    const products = await Product.find({ company: companyId }).lean();
-
-    // Simulate reorder patterns based on stock depletion and creation date
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-    const currentDate = new Date();
-    const analysisData = [];
-
-    // Get low stock count
-    const lowStockCount = getLowStockProducts(products).length;
-
-    for (let i = 5; i >= 0; i--) {
-      const monthIndex = (currentDate.getMonth() - i + 12) % 12;
-      const month = months[monthIndex];
-
-      // Calculate reorder frequency based on:
-      // 1. Number of low stock products
-      let reorderCount = lowStockCount;
-      
-      // 2. Add variance based on month (seasonal patterns)
-      const seasonalVariance = Math.floor(Math.random() * 8 - 4);
-      const monthReorders = Math.max(5, reorderCount + seasonalVariance);
-
-      analysisData.push({
-        month,
-        value: monthReorders,
-        lowStockItems: lowStockCount,
-      });
-    }
-
-    // Calculate average reorder frequency
-    const totalReorders = analysisData.reduce((sum, data) => sum + data.value, 0);
-    const avgReorderFrequency = (totalReorders / analysisData.length).toFixed(1);
-
-    return res.status(200).json({
-      success: true,
-      message: "Reorder patterns analysis fetched successfully",
-      data: analysisData,
-      avgReorderFrequency,
-      totalProductsAnalyzed: products.length,
-      currentLowStockItems: lowStockCount,
-    });
-  } catch (error) {
-    console.error('Reorder Patterns Analysis Error:', error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
 
 /**
  * @description get products by vendor
  * @route GET /api/products/vendor/:vendorName
  * @access Protected
- */ 
+ */
 export const getProductsByVendor = async (req, res) => {
   try {
     const companyId = new mongoose.Types.ObjectId(req.user.company);
@@ -812,5 +710,401 @@ export const getProductsByVendor = async (req, res) => {
       success: false,
       message: "Internal server error",
     });
+  }
+};
+
+export const importProducts = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Please upload a CSV file.",
+      });
+    }
+
+    const rows = [];
+
+    fs.createReadStream(req.file.path)
+      .pipe(csv())
+      .on("data", (data) => rows.push(data))
+     .on("end", async () => {
+  try {
+    const company = await Company.findById(req.user.company);
+
+    const plan = getSubscriptionPlan(company.plan);
+
+    const existingProducts = await Product.countDocuments({
+      company: req.user.company,
+    });
+
+    const remainingSlots = Number.isFinite(plan.maxProducts)
+  ? plan.maxProducts - existingProducts
+  : Infinity;
+
+   if (
+  Number.isFinite(plan.maxProducts) &&
+  rows.length > remainingSlots
+) {
+  fs.unlinkSync(req.file.path);
+
+  return res.status(403).json({
+    success: false,
+    message: `Your ${company.plan} plan has only ${remainingSlots} product slots remaining, but your CSV contains ${rows.length} products.`,
+  });
+}
+
+ const importedProducts = [];
+const errors = [];
+
+for (const row of rows) {
+  try {
+
+    const category = await Category.findOne({
+      company: req.user.company,
+      name: new RegExp(`^${row.category}$`, "i"),
+    });
+
+    if (!category) {
+      errors.push(
+        `Category '${row.category}' not found for '${row.name}'`
+      );
+      continue;
+    }
+
+    const existingSku = await Product.findOne({
+      company: req.user.company,
+      sku: row.sku,
+    });
+
+    if (existingSku) {
+      errors.push(`SKU '${row.sku}' already exists`);
+      continue;
+    }
+
+    const product = await Product.create({
+      company: req.user.company,
+      name: row.name,
+      sku: row.sku.toUpperCase(),
+      barcode: `${req.user.company}-${row.sku.toUpperCase()}`,
+      category: category._id,
+      price: Number(row.price),
+      mrp: Number(row.mrp),
+      dp: Number(row.dp),
+      bv: Number(row.bv),
+      stock: Number(row.stock),
+      lowStockThreshold: Number(row.lowStockThreshold),
+    });
+
+    importedProducts.push(product);
+
+  } catch (err) {
+    errors.push(err.message);
+  }
+}
+
+fs.unlinkSync(req.file.path);
+
+return res.status(200).json({
+  success: true,
+  message: "Products imported successfully",
+  imported: importedProducts.length,
+  skipped: errors.length,
+  errors,
+});
+
+
+
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+});
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const getProductDetails = async (req, res) => {
+  try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid product id",
+      });
+    }
+
+    const companyId = new mongoose.Types.ObjectId(req.user.company);
+    const productId = new mongoose.Types.ObjectId(req.params.id);
+    const {
+      search = "",
+      date,
+      sort = "newest",
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    const currentPage = Math.max(Number.parseInt(page, 10) || 1, 1);
+    const pageLimit = Math.min(Math.max(Number.parseInt(limit, 10) || 10, 1), 50);
+    const skip = (currentPage - 1) * pageLimit;
+
+    const product = await Product.findOne({
+      _id: productId,
+      company: companyId,
+    })
+      .populate("category", "name")
+      .populate("vendor", "name phone email address company status")
+      .lean();
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    const completedProductSaleMatch = {
+      company: companyId,
+      status: "completed",
+      "items.product": productId,
+    };
+
+    const [summaryResult, allSales, allPurchases] = await Promise.all([
+      Order.aggregate([
+        { $match: completedProductSaleMatch },
+        { $unwind: "$items" },
+        { $match: { "items.product": productId } },
+        {
+          $group: {
+            _id: null,
+            totalUnitsSold: { $sum: { $ifNull: ["$items.quantity", 0] } },
+            totalRevenueGenerated: { $sum: { $ifNull: ["$items.subtotal", 0] } },
+          },
+        },
+      ]),
+      Order.aggregate([
+        { $match: completedProductSaleMatch },
+        {
+          $addFields: {
+            billingDate: { $ifNull: ["$paidAt", "$createdAt"] },
+          },
+        },
+        { $unwind: "$items" },
+        { $match: { "items.product": productId } },
+        { $sort: { billingDate: 1, createdAt: 1 } },
+        {
+          $project: {
+            _id: 0,
+            date: "$billingDate",
+            quantity: "$items.quantity",
+          },
+        },
+      ]),
+      SupplyRequest.aggregate([
+        {
+          $match: {
+            companyId,
+            productId,
+            $or: [
+              { status: "delivered" },
+              { paymentStatus: "paid" },
+            ],
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            date: {
+              $ifNull: [
+                "$actualDeliveryDate",
+                { $ifNull: ["$paidAt", "$updatedAt"] },
+              ],
+            },
+            quantity: "$quantity",
+          },
+        },
+        { $sort: { date: 1 } },
+      ]),
+    ]);
+
+    const totalUnitsSold = summaryResult[0]?.totalUnitsSold || 0;
+    const totalRevenueGenerated = summaryResult[0]?.totalRevenueGenerated || 0;
+    const totalPurchased = allPurchases.reduce(
+      (sum, purchase) => sum + (Number(purchase.quantity) || 0),
+      0,
+    );
+    const inferredOpeningStock = Math.max(
+      0,
+      (Number(product.stock) || 0) + totalUnitsSold - totalPurchased,
+    );
+    let remainingStock = inferredOpeningStock;
+    const stockMovement = [
+      {
+        date: product.createdAt,
+        action: "Stock Added",
+        quantity: inferredOpeningStock,
+        remainingStock,
+      },
+      ...[
+        ...allPurchases.map((purchase) => ({
+          date: purchase.date,
+          action: "Purchase",
+          quantity: Number(purchase.quantity) || 0,
+        })),
+        ...allSales.map((sale) => ({
+          date: sale.date,
+          action: "Sold",
+          quantity: -(Number(sale.quantity) || 0),
+        })),
+      ]
+        .sort((left, right) => new Date(left.date) - new Date(right.date))
+        .map((movement) => {
+          remainingStock += movement.quantity;
+          return {
+            ...movement,
+            remainingStock,
+          };
+        }),
+    ];
+
+    const salesMatchStage = { ...completedProductSaleMatch };
+    if (date) {
+      const startDate = new Date(date);
+      if (!Number.isNaN(startDate.getTime())) {
+        const endDate = new Date(startDate);
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+        salesMatchStage.createdAt = { $gte: startDate, $lte: endDate };
+      }
+    }
+
+    const salesPipeline = [
+      { $match: salesMatchStage },
+      {
+        $lookup: {
+          from: "invoices",
+          localField: "_id",
+          foreignField: "order",
+          as: "invoice",
+        },
+      },
+      {
+        $addFields: {
+          invoice: { $first: "$invoice" },
+          invoiceNumber: {
+            $ifNull: [{ $first: "$invoice.invoiceNumber" }, "$orderNumber"],
+          },
+          billingDate: { $ifNull: ["$paidAt", "$createdAt"] },
+          customerDisplayName: {
+            $cond: [
+              { $eq: [{ $trim: { input: { $ifNull: ["$customerName", ""] } } }, ""] },
+              "Walk-in Customer",
+              "$customerName",
+            ],
+          },
+          fullItems: "$items",
+        },
+      },
+      { $unwind: "$items" },
+      { $match: { "items.product": productId } },
+    ];
+
+    const trimmedSearch = search.trim();
+    if (trimmedSearch) {
+      salesPipeline.push({
+        $match: {
+          $or: [
+            { invoiceNumber: { $regex: trimmedSearch, $options: "i" } },
+            { orderNumber: { $regex: trimmedSearch, $options: "i" } },
+            { customerDisplayName: { $regex: trimmedSearch, $options: "i" } },
+          ],
+        },
+      });
+    }
+
+    salesPipeline.push(
+      { $sort: { billingDate: sort === "oldest" ? 1 : -1 } },
+      {
+        $facet: {
+          data: [
+            { $skip: skip },
+            { $limit: pageLimit },
+            {
+              $project: {
+                orderId: "$_id",
+                orderNumber: 1,
+                invoiceId: "$invoice._id",
+                invoiceNumber: 1,
+                customerName: "$customerDisplayName",
+                quantitySold: "$items.quantity",
+                unitPrice: "$items.unitPrice",
+                totalAmount: "$items.subtotal",
+                orderTotal: "$total",
+                subtotal: 1,
+                tax: 1,
+                discount: 1,
+                paymentMethod: 1,
+                paymentStatus: 1,
+                billingDate: 1,
+                items: "$fullItems",
+              },
+            },
+          ],
+          totalCount: [{ $count: "count" }],
+        },
+      },
+    );
+
+    const [salesResult] = await Order.aggregate(salesPipeline);
+    const totalRecords = salesResult?.totalCount?.[0]?.count || 0;
+    const price = Number(product.price) || 0;
+    const costPrice = Number(product.costPrice) || 0;
+    const stock = Number(product.stock) || 0;
+
+    return res.status(200).json({
+      success: true,
+      message: "Product details fetched successfully",
+      data: {
+        product: {
+          id: product._id,
+          name: product.name,
+          sku: product.sku,
+          image: product.image,
+          category: buildCategoryPayload(product.category),
+          vendor: product.vendor || null,
+          price,
+          costPrice,
+          stock,
+          inventoryValue: Math.round(price * stock * 100) / 100,
+          status: stock > (product.lowStockThreshold || 5)
+            ? "In Stock"
+            : stock > 0
+              ? "Low Stock"
+              : "Out of Stock",
+          createdAt: product.createdAt,
+          updatedAt: product.updatedAt,
+        },
+        overview: {
+          totalUnitsSold,
+          totalRevenueGenerated: Math.round(totalRevenueGenerated * 100) / 100,
+          profitPerUnit: Math.round((price - costPrice) * 100) / 100,
+        },
+        salesHistory: salesResult?.data || [],
+        stockMovement,
+        pagination: {
+          total: totalRecords,
+          page: currentPage,
+          pages: Math.ceil(totalRecords / pageLimit),
+          limit: pageLimit,
+        },
+      },
+    });
+  } catch (error) {
+    return handleProductError(res, error);
   }
 };

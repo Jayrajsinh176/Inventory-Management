@@ -12,7 +12,8 @@ import { logActivity } from '../utils/logActivity.js';
 export const searchProducts = async (req, res) => {
     try {
         const { query, limit = 5 } = req.query;
-        const companyId = req.user.company;
+    const companyId = req.user.company;
+
 
         if (!query || query.trim().length === 0) {
             return res.status(400).json({
@@ -87,7 +88,28 @@ export const getProducts = async (req, res) => {
  */
 export const completeBilling = async (req, res) => {
     try {
-        const { items, customerData, paymentMethod, subtotal, tax, discount, total } = req.body;
+       const {
+    items,
+    customerData,
+    customerName,
+    customerEmail,
+    customerPhone,
+    customerAddress,
+    notes,
+    paymentMethod,
+    subtotal,
+    tax,
+    discount,
+    total
+} = req.body;
+
+const resolvedCustomer = {
+    name: customerName ?? customerData?.name,
+    email: customerEmail ?? customerData?.email,
+    phone: customerPhone ?? customerData?.phone,
+    address: customerAddress ?? customerData?.address,
+    notes: notes ?? customerData?.notes
+};
         const companyId = req.user.company;
         const userId = req.user._id;
 
@@ -142,6 +164,11 @@ export const completeBilling = async (req, res) => {
         // 2. Create order number
         const orderCount = await Order.countDocuments({ company: companyId });
         const orderNumber = `ORD-${Date.now()}-${orderCount + 1}`;
+        const calculatedSubtotal = items.reduce(
+    (sum, item) =>
+        sum + Number(item.quantity || 0) * Number(item.price || 0),
+    0
+);
 
         // 3. Create Order
         const orderData = {
@@ -156,34 +183,39 @@ export const completeBilling = async (req, res) => {
                 unitPrice: item.price,
                 subtotal: item.price * item.quantity
             })),
-            subtotal: subtotal || 0,
-            tax: tax || 0,
-            discount: discount || 0,
-            total,
-            paymentMethod,
-            status: 'completed',
-            customerName: customerData?.name || 'Walk-in Customer',
-            customerEmail: customerData?.email || '',
-            customerPhone: customerData?.phone || '',
-            customerAddress: customerData?.address || '',
-            notes: customerData?.notes || ''
+     subtotal: calculatedSubtotal,
+tax: tax || 0,
+discount: discount || 0,
+total: total || calculatedSubtotal,
+totalAmount: calculatedSubtotal,
+paymentMethod,
+paymentStatus:
+    paymentMethod === "online"
+        ? "paid"
+        : "pending",
+status: "completed",
+customerName: resolvedCustomer.name?.trim() || 'Walk-in Customer',
+customerEmail: resolvedCustomer.email || '',
+customerPhone: resolvedCustomer.phone || '',
+customerAddress: resolvedCustomer.address || '',
+notes: resolvedCustomer.notes || ''
         };
 
         const order = await Order.create(orderData);
 
         // 4. Create Invoice
         const invoiceNumber = `INV-${Date.now()}-${orderCount + 1}`;
-        const invoiceData = {
-            company: companyId,
-            order: order._id,
-            invoiceNumber,
-            amount: total,
-            tax,
-            subtotal,
-            status: 'issued',
-            paymentStatus: paymentMethod === 'online' ? 'completed' : 'pending',
-            dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
-        };
+       const invoiceData = {
+    company: companyId,
+    order: order._id,
+    invoiceNumber,
+    amount: total || calculatedSubtotal,
+    tax: tax || 0,
+    subtotal: calculatedSubtotal,
+    status: 'issued',
+    paymentStatus: paymentMethod === 'online' ? 'completed' : 'pending',
+    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+};
 
         const invoice = await Invoice.create(invoiceData);
 
@@ -192,7 +224,7 @@ export const completeBilling = async (req, res) => {
             userId,
             companyId,
             action: 'created_order',
-            details: `Created order ${orderNumber} with total ₹${total}`,
+            details: `Created order ${orderNumber} with total ₹${order.total}`,
             metadata: {
                 orderId: order._id,
                 invoiceId: invoice._id,
@@ -256,6 +288,85 @@ export const getBillingSummary = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to fetch billing summary'
+        });
+    }
+};
+
+/**
+ * @description Get billing history
+ * @route GET /api/billing/history
+ * @access Private
+ */
+export const getBillingHistory = async (req, res) => {
+    try {
+        const companyId = req.user.company;
+        const {
+    page = 1,
+    limit = 10,
+    search,
+    paymentMethod,
+    paymentStatus,
+    date,
+    sort = "newest"
+} = req.query;
+
+       const filter = {
+    company: companyId,
+    status: "completed"
+};
+
+if (paymentMethod) {
+    filter.paymentMethod = paymentMethod;
+}
+
+if (paymentStatus) {
+    filter.paymentStatus = paymentStatus;
+}
+
+if (search) {
+    filter.$or = [
+        { orderNumber: { $regex: search, $options: "i" } },
+        { customerName: { $regex: search, $options: "i" } }
+    ];
+}
+
+if (date) {
+    const start = new Date(date);
+    const end = new Date(date);
+    end.setDate(end.getDate() + 1);
+
+    filter.createdAt = {
+        $gte: start,
+        $lt: end
+    };
+}
+
+const orders = await Order.find(filter)
+    .populate("items.product", "name sku")
+    .sort({
+        createdAt: sort === "oldest" ? 1 : -1
+    })
+    .skip((page - 1) * limit)
+    .limit(Number(limit));
+
+const total = await Order.countDocuments(filter);
+    res.status(200).json({
+    success: true,
+    data: orders,
+    pagination: {
+        total,
+        page: Number(page),
+        pages: Math.ceil(total / limit),
+        limit: Number(limit)
+    }
+});
+
+    } catch (error) {
+        console.log("Get Billing History Error:", error);
+
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch billing history"
         });
     }
 };

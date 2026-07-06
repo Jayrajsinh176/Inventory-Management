@@ -35,7 +35,7 @@ const LandingPage = () => {
       {/* Blind spots / benefits */}
       <BlindSpotsSection />
 
-      {/* Pricing tiers */}
+      {/* Pricing */}
       <PricingSection />
 
       {/* Built for every model */}

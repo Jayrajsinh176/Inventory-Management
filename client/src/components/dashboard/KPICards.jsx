@@ -1,34 +1,69 @@
 import { MdInventory2, MdCategory, MdWarning, MdPayments, MdTrendingUp, MdTrendingDown, MdAttachMoney } from 'react-icons/md';
 import { useState, useEffect } from 'react';
-import { getProductStats, getCategories, getProducts } from '../../api';
+import { getProductStats, getCategories, getProducts,getOrderStats,AuthService  } from '../../api';
 
 const KPICards = () => {
-  const [stats, setStats] = useState({
-    totalProducts: '0',
-    totalCategories: '0',
-    lowStockItems: '0',
-    inventoryValue: '₹0.00',
-    totalRevenue: '₹0.00',
-  });
+const [stats, setStats] = useState({
+  totalProducts: '0',
+  totalCategories: '0',
+  lowStockItems: '0',
+  inventoryValue: '₹0.00',
+  totalRevenue: '₹0.00',
+
+  todayRevenue: '₹0.00',
+  todayOrders: '0',
+  todayItemsSold: '0',
+});
   const [loading, setLoading] = useState(true);
+const company = AuthService.getCompany();
+
+const currentPlan = company?.plan || "Basic";
+
+const productLimit =
+  currentPlan === "Basic"
+    ? 50
+    : currentPlan === "Standard"
+    ? 500
+    : Infinity;
 
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {
         setLoading(true);
-        const [statsResponse, categoriesResponse, productsResponse] = await Promise.all([
-          getProductStats(),
-          getCategories(),
-          getProducts({ limit: 1000 }),
-        ]);
+       const [
+  statsResponse,
+  categoriesResponse,
+  productsResponse,
+  orderStatsResponse,
+] = await Promise.all([
+  getProductStats(),
+  getCategories(),
+  getProducts({ limit: 1000 }),
+  getOrderStats(),
+]);
 
         // Extract stats from response
         const productStats = statsResponse.stats || {};
         const categories = categoriesResponse.data || [];
         const products = productsResponse.products || [];
-
+        
+const inventoryValue = products.reduce(
+  (sum, product) =>
+    sum + (product.dp || 0) * (product.stock || 0),
+  0
+);
         // Calculate total revenue
-        const totalRevenue = products.reduce((sum, product) => sum + product.price * product.stock, 0);
+       const totalRevenue =
+  orderStatsResponse.stats?.totalRevenue || 0;
+
+  const todayRevenue =
+  orderStatsResponse.stats?.todayRevenue || 0;
+
+const todayOrders =
+  orderStatsResponse.stats?.todayOrders || 0;
+
+const todayItemsSold =
+  orderStatsResponse.stats?.todayItemsSold || 0;
 
         setStats({
           totalProducts: productStats.totalProducts?.toString() || '0',
@@ -36,6 +71,9 @@ const KPICards = () => {
           lowStockItems: productStats.lowStocksAlerts?.toString() || '0',
           inventoryValue: `₹${parseFloat(productStats.inventoryValue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
           totalRevenue: `₹${totalRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          todayOrders: todayOrders.toString(),
+
+todayItemsSold: todayItemsSold.toString(),
         });
       } catch (error) {
         console.error('Failed to fetch dashboard stats:', error);
@@ -45,6 +83,7 @@ const KPICards = () => {
           lowStockItems: '0',
           inventoryValue: '₹0.00',
           totalRevenue: '₹0.00',
+          
         });
       } finally {
         setLoading(false);
@@ -55,14 +94,18 @@ const KPICards = () => {
   }, []);
 
   const cards = [
-    {
-      label: 'Total Products',
-      value: stats.totalProducts,
-      description: 'Active items in inventory',
-      trend: 'neutral',
-      icon: MdInventory2,
-      color: '#007BFF',
-    },
+    
+   {
+  label: 'Total Products',
+  value: stats.totalProducts,
+  description:
+    Number.isFinite(productLimit)
+      ? `${stats.totalProducts} / ${productLimit} Products Used`
+      : "Unlimited Products",
+  trend: 'neutral',
+  icon: MdInventory2,
+  color: '#007BFF',
+},
     {
       label: 'Total Categories',
       value: stats.totalCategories,
