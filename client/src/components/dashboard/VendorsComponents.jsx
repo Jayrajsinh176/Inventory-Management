@@ -15,6 +15,8 @@ import {
   updateVendorSupplyRequestStatus,
 } from '../../api';
 
+const loginType = AuthService.getLoginType();
+const isCompany = loginType !== "franchise";
 // ============================================
 // VENDORS HEADER COMPONENT
 // ============================================
@@ -109,17 +111,17 @@ export const VendorsList = ({ refreshKey, selectedVendor, onVendorSelect, onVend
   return (
     <div className="space-y-6">
       {/* Add Vendor Form - Shows First When Active */}
-      {showAddForm && (
-        <AddVendorForm
-          onClose={() => setShowAddForm(false)}
-          onVendorAdded={handleVendorAdded}
-        />
-      )}
+     {isCompany && showAddForm && (
+  <AddVendorForm
+    onClose={() => setShowAddForm(false)}
+    onVendorAdded={handleVendorAdded}
+  />
+)}
 
       {/* Header with Add Button */}
-      {!showAddForm && (
-        <VendorsHeader onAddVendor={() => setShowAddForm(true)} />
-      )}
+    {isCompany && !showAddForm && (
+  <VendorsHeader onAddVendor={() => setShowAddForm(true)} />
+)}
 
       {/* Search Bar - Hidden when form is showing */}
       {!showAddForm && (
@@ -359,25 +361,33 @@ const VendorDetailView = ({ vendorId, onBack }) => {
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setShowEditModal(true)}
-              className="px-3 py-2 text-sm font-semibold border border-[#DEE2E6] text-[#212529] rounded hover:border-[#000000]"
-            >
-              Edit Vendor
-            </button>
-            <button
-              onClick={handleToggleStatus}
-              className="px-3 py-2 text-sm font-semibold border border-[#DEE2E6] text-[#212529] rounded hover:border-[#000000]"
-            >
-              {vendor.status === 'active' ? 'Deactivate' : 'Activate'}
-            </button>
-            <button
-              onClick={() => setShowOrderModal(true)}
-              className="px-3 py-2 text-sm font-semibold bg-[#000000] text-white rounded hover:bg-[#1A1A1A]"
-            >
-              Send Order
-            </button>
-          </div>
+  {isCompany && (
+    <>
+      <button
+        onClick={() => setShowEditModal(true)}
+        className="px-3 py-2 text-sm font-semibold border border-[#DEE2E6] text-[#212529] rounded hover:border-[#000000]"
+      >
+        Edit Vendor
+      </button>
+
+      <button
+        onClick={handleToggleStatus}
+        className="px-3 py-2 text-sm font-semibold border border-[#DEE2E6] text-[#212529] rounded hover:border-[#000000]"
+      >
+        {vendor.status === "active"
+          ? "Deactivate"
+          : "Activate"}
+      </button>
+
+      <button
+        onClick={() => setShowOrderModal(true)}
+        className="px-3 py-2 text-sm font-semibold bg-[#000000] text-white rounded hover:bg-[#1A1A1A]"
+      >
+        Send Order
+      </button>
+    </>
+  )}
+</div>
         </div>
 
         {/* Vendor Information Grid */}
@@ -464,15 +474,15 @@ const VendorDetailView = ({ vendorId, onBack }) => {
         </div>
       </div>
 
-      {showEditModal && (
+     {isCompany && showEditModal && (
         <EditVendorModal
           vendor={vendor}
           onClose={() => setShowEditModal(false)}
           onVendorUpdated={handleVendorUpdated}
         />
       )}
-
-      {showOrderModal && (
+      
+{isCompany && showOrderModal && (
         <SendOrderModal
           vendor={vendor}
           products={products}

@@ -11,7 +11,13 @@ export const getInvoices = async (req, res) => {
     try {
         const { status, sortBy = '-issueDate', page = 1, limit = 10 } = req.query;
 
-        const filters = { company: req.user.company };
+      const filters = {
+    company: req.user.company,
+};
+
+if (req.user.role === "franchise") {
+    filters.franchise = req.user.franchise;
+}
         
         if (status) filters.status = status;
 
@@ -62,7 +68,16 @@ export const getInvoiceById = async (req, res) => {
             return res.status(400).json({ message: "Invalid invoice ID" });
         }
 
-        const invoice = await Invoice.findById(id)
+     const query = {
+    _id: id,
+    company: req.user.company,
+};
+
+if (req.user.role === "franchise") {
+    query.franchise = req.user.franchise;
+}
+
+const invoice = await Invoice.findOne(query)
             .populate([
                 { path: 'company', select: 'name' },
                 { path: 'user', select: 'name email' },
@@ -71,11 +86,6 @@ export const getInvoiceById = async (req, res) => {
 
         if (!invoice) {
             return res.status(404).json({ message: "Invoice not found" });
-        }
-
-        // Authorization check
-        if (invoice.company._id.toString() !== req.user.company.toString()) {
-            return res.status(403).json({ message: "Not authorized to access this invoice" });
         }
 
         res.status(200).json({
@@ -105,7 +115,16 @@ export const getInvoiceByOrderId = async (req, res) => {
             return res.status(400).json({ message: "Invalid order ID" });
         }
 
-        const invoice = await Invoice.findOne({ order: orderId })
+     const query = {
+    order: orderId,
+    company: req.user.company,
+};
+
+if (req.user.role === "franchise") {
+    query.franchise = req.user.franchise;
+}
+
+const invoice = await Invoice.findOne(query)
             .populate([
                 { path: 'company', select: 'name' },
                 { path: 'user', select: 'name email' },
@@ -115,11 +134,7 @@ export const getInvoiceByOrderId = async (req, res) => {
         if (!invoice) {
             return res.status(404).json({ message: "Invoice not found for this order" });
         }
-
-        // Authorization check
-        if (invoice.company._id.toString() !== req.user.company.toString()) {
-            return res.status(403).json({ message: "Not authorized to access this invoice" });
-        }
+ 
 
         res.status(200).json({
             message: "Invoice retrieved successfully",
@@ -149,15 +164,19 @@ export const updateInvoiceStatus = async (req, res) => {
             return res.status(400).json({ message: "Invalid invoice ID" });
         }
 
-        const invoice = await Invoice.findById(id);
+  const query = {
+    _id: id,
+    company: req.user.company,
+};
+
+if (req.user.role === "franchise") {
+    query.franchise = req.user.franchise;
+}
+
+const invoice = await Invoice.findOne(query);
 
         if (!invoice) {
             return res.status(404).json({ message: "Invoice not found" });
-        }
-
-        // Authorization check
-        if (invoice.company.toString() !== req.user.company.toString()) {
-            return res.status(403).json({ message: "Not authorized to update this invoice" });
         }
 
         // Update status
@@ -167,12 +186,13 @@ export const updateInvoiceStatus = async (req, res) => {
                 return res.status(400).json({ message: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
             }
 
-            invoice.status = status;
+         const previousStatus = invoice.status;
 
-            // Update paid date if marking as paid
-            if (status === 'paid' && invoice.status !== 'paid') {
-                invoice.paidDate = new Date();
-            }
+invoice.status = status;
+
+if (status === "paid" && previousStatus !== "paid") {
+    invoice.paidDate = new Date();
+}
         }
 
         // Update payment method
@@ -231,6 +251,10 @@ export const getInvoiceStats = async (req, res) => {
         const { dateFrom, dateTo } = req.query;
 
         const filters = { company: req.user.company };
+
+        if (req.user.role === "franchise") {
+    filters.franchise = req.user.franchise;
+}
 
         if (dateFrom || dateTo) {
             filters.issueDate = {};
@@ -297,7 +321,16 @@ export const downloadInvoice = async (req, res) => {
             return res.status(400).json({ message: "Invalid invoice ID" });
         }
 
-        const invoice = await Invoice.findById(id)
+       const query = {
+    _id: id,
+    company: req.user.company,
+};
+
+if (req.user.role === "franchise") {
+    query.franchise = req.user.franchise;
+}
+
+const invoice = await Invoice.findOne(query)
             .populate([
                 { path: 'company' },
                 { path: 'user', select: 'name email phone' },
@@ -308,9 +341,6 @@ export const downloadInvoice = async (req, res) => {
             return res.status(404).json({ message: "Invoice not found" });
         }
 
-        if (invoice.company._id.toString() !== req.user.company.toString()) {
-            return res.status(403).json({ message: "Not authorized to download this invoice" });
-        }
 
         res.status(200).json({
             message: "Invoice ready for download",
@@ -337,37 +367,49 @@ export const getPendingInvoices = async (req, res) => {
         const { page = 1, limit = 10 } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
-        const invoices = await Invoice.find({ 
+        // Filters
+        const filters = {
             company: req.user.company,
-            status: 'unpaid'
-        })
+            status: "unpaid",
+        };
+
+        if (req.user.role === "franchise") {
+            filters.franchise = req.user.franchise;
+        }
+
+        const invoices = await Invoice.find(filters)
             .populate([
-                { path: 'company', select: 'name' },
-                { path: 'user', select: 'name email' },
-                { path: 'order', select: 'orderNumber items' }
+                { path: "company", select: "name" },
+                { path: "user", select: "name email" },
+                { path: "order", select: "orderNumber items" },
             ])
-            .sort('-dueDate')
+            .sort("-dueDate")
             .skip(skip)
             .limit(parseInt(limit));
 
-        const totalPending = await Invoice.countDocuments({ 
-            company: req.user.company,
-            status: 'unpaid'
-        });
+        const totalPending = await Invoice.countDocuments(filters);
+
+        const matchStage = {
+            company: new mongoose.Types.ObjectId(req.user.company),
+            status: "unpaid",
+        };
+
+        if (req.user.role === "franchise") {
+            matchStage.franchise = new mongoose.Types.ObjectId(req.user.franchise);
+        }
 
         const totalPendingAmount = await Invoice.aggregate([
-            { 
-                $match: { 
-                    company: mongoose.Types.ObjectId(req.user.company),
-                    status: 'unpaid'
-                } 
+            {
+                $match: matchStage,
             },
-            { 
-                $group: { 
-                    _id: null, 
-                    total: { $sum: '$amount' } 
-                } 
-            }
+            {
+                $group: {
+                    _id: null,
+                    total: {
+                        $sum: "$amount",
+                    },
+                },
+            },
         ]);
 
         res.status(200).json({
@@ -379,15 +421,15 @@ export const getPendingInvoices = async (req, res) => {
                 total: totalPending,
                 page: parseInt(page),
                 pages: Math.ceil(totalPending / parseInt(limit)),
-                limit: parseInt(limit)
-            }
+                limit: parseInt(limit),
+            },
         });
-
     } catch (error) {
         console.error("Error retrieving pending invoices:", error);
-        res.status(500).json({ 
-            message: "Error retrieving pending invoices", 
-            error: error.message 
+
+        res.status(500).json({
+            message: "Error retrieving pending invoices",
+            error: error.message,
         });
     }
 };

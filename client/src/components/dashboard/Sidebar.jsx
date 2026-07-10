@@ -22,10 +22,15 @@ import {
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = AuthService.getUser();
-  const company = AuthService.getCompany();
-  console.log(user);
-  console.log(company);
+const loginType = AuthService.getLoginType();
+
+const user =
+  loginType === "franchise"
+    ? AuthService.getFranchise()
+    : AuthService.getUser();
+
+const company = AuthService.getCompany();
+
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [franchiseOpen, setFranchiseOpen] = useState(true);
   useEffect(() => {
@@ -151,7 +156,7 @@ const Sidebar = () => {
             active={isActive('/billing-history')}
             onClick={() => navigateTo('/billing-history')}
           />
-{company?.plan === "Business" && (
+{loginType !== "franchise" && company?.plan === "Business" && (
           <div className="space-y-1">
             <button
               onClick={() => setFranchiseOpen(!franchiseOpen)}
@@ -231,7 +236,11 @@ const Sidebar = () => {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[14px] font-semibold text-[#212529] truncate">{user?.name || 'User'}</p>
-              <p className="text-[12px] text-[#6C757D] truncate capitalize">{user?.role || 'staff'}</p>
+           <p className="text-[12px] text-[#6C757D] truncate capitalize">
+  {loginType === "franchise"
+    ? "Location Manager"
+    : user?.role || "staff"}
+</p>
             </div>
           </div>
 

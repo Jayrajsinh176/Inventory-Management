@@ -6,6 +6,8 @@ import Invoice from '../models/invoice.model.js';
 import Alert from '../models/alert.model.js';
 import SupplyRequest from '../models/supplyRequest.model.js';
 import { sendEmail } from '../utils/email.js';
+import LocationStock from "../models/locationStock.model.js";
+import Franchise from "../models/franchise.model.js";
 
 const buildSupplyRequestPaymentRoute = (vendorId, requestId) => `/vendors/${vendorId}/supply-requests/${requestId}/payment`;
 
@@ -19,6 +21,13 @@ export const createVendor = async (req, res) => {
         const { name, email, phone, address } = req.body;
         const companyId = new mongoose.Types.ObjectId(req.user.company);
 
+        if (req.user.role === "franchise") {
+  return res.status(403).json({
+    success: false,
+    message: "Only Company Admin can create vendors.",
+  });
+}
+        
         if (!name || !phone) {
             return res.status(400).json({
                 success: false,
@@ -122,6 +131,13 @@ export const updateVendor = async (req, res) => {
     try {
         const { id } = req.params;
         const companyId = new mongoose.Types.ObjectId(req.user.company);
+if (req.user.role === "franchise") {
+  return res.status(403).json({
+    success: false,
+    message: "Only Company Admin can update vendors.",
+  });
+}
+
         const { name, email, phone, address, status } = req.body;
 
         const vendor = await Vendor.findOne({ _id: id, companyId });
@@ -163,6 +179,13 @@ export const deleteVendor = async (req, res) => {
     try {
         const { id } = req.params;
         const companyId = new mongoose.Types.ObjectId(req.user.company);
+
+        if (req.user.role === "franchise") {
+  return res.status(403).json({
+    success: false,
+    message: "Only Company Admin can delete vendors.",
+  });
+}
 
         const vendor = await Vendor.findOne({ _id: id, companyId });
         if (!vendor) {
@@ -246,6 +269,13 @@ export const assignProductToVendor = async (req, res) => {
         const { productId } = req.body;
         const companyId = new mongoose.Types.ObjectId(req.user.company);
 
+        if (req.user.role === "franchise") {
+  return res.status(403).json({
+    success: false,
+    message: "Only Company Admin can assign products to vendors.",
+  });
+}
+
         if (!productId) {
             return res.status(400).json({
                 success: false,
@@ -302,6 +332,13 @@ export const removeProductFromVendor = async (req, res) => {
     try {
         const { id, productId } = req.params;
         const companyId = new mongoose.Types.ObjectId(req.user.company);
+
+if (req.user.role === "franchise") {
+  return res.status(403).json({
+    success: false,
+    message: "Only Company Admin can remove products from vendors.",
+  });
+}
 
         const vendor = await Vendor.findOne({ _id: id, companyId });
         if (!vendor) {
@@ -536,6 +573,8 @@ export const createSupplyRequest = async (req, res) => {
         });
 
         await supplyRequest.save();
+
+        
 
         // Update vendor's total supply requests
         vendor.totalSupplyRequests = (vendor.totalSupplyRequests || 0) + 1;
@@ -786,6 +825,41 @@ export const paySupplyRequest = async (req, res) => {
         }
 
         await supplyRequest.save();
+
+// Increase Main Store stock after supplier delivery
+
+const product = await Product.findById(supplyRequest.productId);
+
+if (product) {
+  product.stock += supplyRequest.quantity;
+  await product.save();
+
+  const mainStore = await Franchise.findOne({
+    company: companyId,
+    isDefault: true,
+  });
+
+  if (mainStore) {
+    let locationStock = await LocationStock.findOne({
+      company: companyId,
+      locationId: mainStore._id,
+      product: product._id,
+    });
+
+    if (!locationStock) {
+      locationStock = await LocationStock.create({
+        company: companyId,
+        locationId: mainStore._id,
+        product: product._id,
+        stock: 0,
+      });
+    }
+
+    locationStock.stock += supplyRequest.quantity;
+    await locationStock.save();
+  }
+}
+
 
         await Alert.create({
             company: companyId,

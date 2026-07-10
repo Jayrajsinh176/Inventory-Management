@@ -10,15 +10,29 @@ export const dashboardStats = async (req, res) => {
     try {
         const userId = req.user._id;
         const companyId = req.user.company;
-        // total products
-        const totalProducts = await Product.countDocuments({ company: companyId });
-        // total categories
-        const totalCategories = await mongoose.connection.collection('categories').countDocuments({ company: companyId });
-        // total users
-        const totalUsers = await mongoose.connection.collection('users').countDocuments({ company: companyId });
-        
-        // low stock alerts - count products where stock <= lowStockThreshold
-        const lowStockProducts = await Product.find({ company: companyId });
+
+const productFilter = {
+    company: companyId,
+};
+
+if (req.user.role === "franchise") {
+    productFilter.franchise = req.user.franchise;
+}
+
+// total products
+const totalProducts = await Product.countDocuments(productFilter);
+
+const totalCategories = await mongoose.connection
+  .collection("categories")
+  .countDocuments({ company: companyId });
+
+const totalUsers = await mongoose.connection
+  .collection("users")
+  .countDocuments({ company: companyId });
+
+// low stock alerts
+const lowStockProducts = await Product.find(productFilter);
+
         const totalAlerts = lowStockProducts.filter(product => product.stock <= product.lowStockThreshold).length;
         
         // inventory value - set to 0 for now
@@ -42,8 +56,17 @@ export const dashboardStats = async (req, res) => {
  */
 export const getLowStockAlerts = async (req, res) => {
     try {
-        const companyId = req.user.company;
-        const products = await Product.find({ company: companyId })
+ const companyId = req.user.company;
+
+const productFilter = {
+    company: companyId,
+};
+
+if (req.user.role === "franchise") {
+    productFilter.franchise = req.user.franchise;
+}
+
+const products = await Product.find(productFilter)
             .select('name sku stock lowStockThreshold price vendor category')
             .populate('category', 'name')
             .populate('vendor', 'name');

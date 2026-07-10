@@ -7,6 +7,21 @@ const orderSchema = new mongoose.Schema(
       ref: 'Company',
       required: true,
     },
+
+    // NEW
+franchise: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "Franchise",
+  default: null,
+},
+
+// NEW
+createdBy: {
+  type: String,
+  enum: ["company", "franchise"],
+  default: "company",
+},
+
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

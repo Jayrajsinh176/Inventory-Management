@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+
 import { MdAdd } from 'react-icons/md';
 import toast from 'react-hot-toast';
 import Sidebar from '../components/dashboard/Sidebar';
@@ -13,8 +13,9 @@ import DailySalesSummary from "../components/dashboard/DailySalesSummary";
 import BusinessOverview from "../components/dashboard/BusinessOverview";
 import { AuthService } from "../api";
 const DashboardPage = () => {
-  const navigate = useNavigate();
-  const company = AuthService.getCompany();
+  
+const company = AuthService.getCompany();
+const loginType = AuthService.getLoginType();
 
   const handleExportReport = () => {
     // For now, show a toast. In production, this would generate a PDF/CSV
@@ -60,7 +61,8 @@ const DashboardPage = () => {
           {/* KPI Cards */}
           <KPICards />
 
-{company?.plan === "Business" && (
+{company?.plan === "Business" &&
+ loginType !== "franchise" && (
   <BusinessOverview />
 )}
 

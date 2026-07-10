@@ -29,7 +29,7 @@ export default function FranchiseListPage() {
     const fetchFranchises = async () => {
       try {
         const response = await getFranchises();
-        setFranchises(response.franchises || []);
+        setFranchises(response.data || []);
       } catch (error) {
         console.error(error);
         toast.error("Failed to load locations.");

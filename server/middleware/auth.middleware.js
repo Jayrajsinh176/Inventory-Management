@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../models/users.model.js";
+import Franchise from "../models/franchise.model.js";
 
 const buildSafeUser = (user) => ({
   _id: String(user._id),
@@ -35,13 +36,45 @@ export const protect = async (req, res, next) => {
       return res.status(401).json({ message: "Invalid token type" });
     }
 
-    const user = await User.findById(decoded.id).select(
-      "-password +tokenVersion",
-    );
+   let user = null;
 
-    if (!user) {
-      return res.status(401).json({ message: "User not found for this token" });
-    }
+if (decoded.role === "franchise") {
+  user = await Franchise.findById(decoded.id).select("-password");
+
+  if (!user) {
+    return res
+      .status(401)
+      .json({ message: "Franchise not found for this token" });
+  }
+
+req.user = {
+  _id: String(user._id),
+  id: String(user._id),
+  company: String(user.company),
+  companyId: String(user.company),
+
+  franchise: String(user._id),
+  locationId: String(user._id),
+
+  name: user.name,
+  email: user.email,
+  phone: user.phone,
+  role: "franchise",
+  status: user.status,
+};
+
+  return next();
+}
+
+user = await User.findById(decoded.id).select(
+  "-password +tokenVersion"
+);
+
+if (!user) {
+  return res
+    .status(401)
+    .json({ message: "User not found for this token" });
+}
 
     if ((decoded.tokenVersion ?? 0) !== (user.tokenVersion ?? 0)) {
       return res.status(401).json({ message: "Token has been revoked" });

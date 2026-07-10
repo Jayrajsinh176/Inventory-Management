@@ -11,13 +11,20 @@ const Header = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef(null);
+const loginType = AuthService.getLoginType();
 
-  const user = AuthService.getUser();
-  const company = AuthService.getCompany();
+const user =
+  loginType === "franchise"
+    ? AuthService.getFranchise()
+    : AuthService.getUser();
 
-  const currentPlan = company?.plan
-    ? company.plan.charAt(0).toUpperCase() +
-    company.plan.slice(1)
+const company = AuthService.getCompany();
+
+const currentPlan =
+  loginType === "franchise"
+    ? "Business"
+    : company?.plan
+    ? company.plan.charAt(0).toUpperCase() + company.plan.slice(1)
     : "Trial";
   const userInitials = user?.name
     ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)

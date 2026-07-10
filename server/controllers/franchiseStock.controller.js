@@ -1,5 +1,5 @@
 import Product from "../models/product.model.js";
-import FranchiseStock from "../models/franchiseStock.model.js";
+import LocationStock from "../models/locationStock.model.js";
 import Company from "../models/company.model.js";
 import { isMultiLocationStockAllowed } from "../utils/subscription.js";
 
@@ -46,20 +46,22 @@ export const assignStock = async (req, res) => {
       });
     }
 
-    let franchiseStock = await FranchiseStock.findOne({
-      franchiseId,
-      product: productId,
-    });
+let locationStock = await LocationStock.findOne({
+  company: req.user.company,
+  locationId: franchiseId,
+  product: productId,
+});
 
-    if (franchiseStock) {
-      franchiseStock.quantity += Number(quantity);
-      await franchiseStock.save();
+    if (locationStock) {
+     locationStock.stock += Number(quantity);
+await locationStock.save();
     } else {
-      franchiseStock = await FranchiseStock.create({
-        franchiseId,
-        product: productId,
-        quantity,
-      });
+     locationStock = await LocationStock.create({
+  company: req.user.company,
+  locationId: franchiseId,
+  product: productId,
+  stock: Number(quantity),
+});
     }
 
     // Minus from main stock
@@ -69,7 +71,7 @@ export const assignStock = async (req, res) => {
     return res.json({
       success: true,
       message: "Stock assigned successfully",
-      data: franchiseStock,
+  data: locationStock,
     });
   } catch (error) {
     console.log(error);

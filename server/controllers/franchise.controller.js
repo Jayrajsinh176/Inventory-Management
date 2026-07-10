@@ -1,4 +1,6 @@
 import Company from "../models/company.model.js";
+import Product from "../models/product.model.js";
+import LocationStock from "../models/locationStock.model.js";
 // import User from "../models/users.model.js";
 // import Subscription from "../models/subscription.model.js";
 // import Product from "../models/product.model.js";
@@ -9,22 +11,7 @@ import {
   canAddLocationToPlan,
   formatPlanLocationLimit,
 } from "../utils/subscription.js";
-
-const generatePassword = (length = 10) => {
-  const chars =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$";
-
-  let password = "";
-
-  for (let i = 0; i < length; i++) {
-    password += chars.charAt(
-      Math.floor(Math.random() * chars.length)
-    );
-  }
-
-  return password;
-};
-
+import bcrypt from "bcryptjs";
 
 
 export const createFranchise = async (req, res) => {
@@ -33,6 +20,7 @@ export const createFranchise = async (req, res) => {
       company_name,
       name,
       email,
+      password,
       phone,
       address,
       gstNumber,
@@ -60,6 +48,13 @@ export const createFranchise = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Email is required",
+      });
+    }
+
+    if (!password || password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters.",
       });
     }
 
@@ -153,17 +148,34 @@ export const createFranchise = async (req, res) => {
     // ===========================
     // Create Location
     // ===========================
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const location = await Franchise.create({
       company: req.user.company,
       company_name: company_name.trim(),
       name: name.trim(),
       email: email.toLowerCase(),
+      password: hashedPassword,
       phone,
       address: address.trim(),
       gstNumber: gstNumber?.trim() || "",
       isDefault: currentLocations === 0,
     });
+
+    const products = await Product.find({
+  company: req.user.company,
+}).select("_id");
+
+if (products.length > 0) {
+  const stocks = products.map((product) => ({
+    company: req.user.company,
+    locationId: location._id,
+    product: product._id,
+    stock: 0,
+  }));
+
+  await LocationStock.insertMany(stocks);
+}
 
     // ===========================
     // Response
@@ -193,7 +205,7 @@ export const getFranchises = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      franchises,
+      data: franchises,
     });
   } catch (error) {
     console.error("Get Locations Error:", error);
@@ -424,7 +436,7 @@ export const getFranchiseLocations = async (req, res) => {
     const locations = await Franchise.find({
       company: req.user.company,
     })
-    .select("company_name name email phone")
+      .select("company_name name email phone")
       .sort({ createdAt: 1 });
 
     return res.json({

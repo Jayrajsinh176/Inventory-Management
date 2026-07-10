@@ -30,34 +30,23 @@ const productLimit =
     const fetchDashboardStats = async () => {
       try {
         setLoading(true);
-       const [
+const [
   statsResponse,
   categoriesResponse,
-  productsResponse,
   orderStatsResponse,
 ] = await Promise.all([
   getProductStats(),
   getCategories(),
-  getProducts({ limit: 1000 }),
   getOrderStats(),
 ]);
 
         // Extract stats from response
         const productStats = statsResponse.stats || {};
         const categories = categoriesResponse.data || [];
-        const products = productsResponse.products || [];
-        
-const inventoryValue = products.reduce(
-  (sum, product) =>
-    sum + (product.dp || 0) * (product.stock || 0),
-  0
-);
+
         // Calculate total revenue
        const totalRevenue =
   orderStatsResponse.stats?.totalRevenue || 0;
-
-  const todayRevenue =
-  orderStatsResponse.stats?.todayRevenue || 0;
 
 const todayOrders =
   orderStatsResponse.stats?.todayOrders || 0;

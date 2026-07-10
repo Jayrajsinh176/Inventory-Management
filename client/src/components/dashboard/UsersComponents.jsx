@@ -34,6 +34,8 @@ const UsersHeader = ({ onAddClick, loading }) => {
 const UsersTable = ({ showAddForm, setShowAddForm }) => {
   const navigate = useNavigate();
   const company = AuthService.getCompany();
+  const loginType = AuthService.getLoginType();
+const isFranchise = loginType === "franchise";
   const [franchises, setFranchises] = useState([]);
 const [newUserLocation, setNewUserLocation] = useState("");
   const [users, setUsers] = useState([]);
@@ -56,9 +58,9 @@ const [newUserLocation, setNewUserLocation] = useState("");
 useEffect(() => {
   fetchUsers();
 
-  if (company?.plan === "Business") {
-    fetchFranchises();
-  }
+if (company?.plan === "Business" && !isFranchise) {
+  fetchFranchises();
+}
 }, [searchTerm, currentPage, roleFilter, statusFilter]);
 
   const fetchUsers = async () => {
@@ -115,8 +117,9 @@ useEffect(() => {
   !newUserEmail ||
   !newUserPhone ||
   (company?.plan === "Business" &&
-    newUserRole !== "admin" &&
-    !newUserLocation)
+ !isFranchise &&
+ newUserRole !== "admin" &&
+ !newUserLocation)
 ) {
       setError('Please fill in all fields');
       return;
@@ -124,12 +127,12 @@ useEffect(() => {
 
     try {
       setAddingUser(true);
-     await addUser({
+ await addUser({
   name: newUserName,
   email: newUserEmail,
   phone: newUserPhone,
   role: newUserRole,
-  locationId: newUserLocation,
+  ...(isFranchise ? {} : { locationId: newUserLocation }),
 });
       setNewUserName('');
       setNewUserEmail('');
@@ -280,17 +283,20 @@ useEffect(() => {
                   className="w-full px-4 py-2 border border-[#DEE2E6] rounded-lg text-[14px] focus:outline-none focus:border-[#000000] focus:ring-1 focus:ring-[#000000]"
                   disabled={addingUser}
                 >
-                  <option value="staff">Staff</option>
+                 <option value="staff">Staff</option>
 
-                  {company?.plan === "Business" && (
-                    <option value="manager">Manager</option>
-                  )}
+{!isFranchise && company?.plan === "Business" && (
+  <option value="manager">Manager</option>
+)}
 
-                  <option value="admin">Admin</option>
-
+{!isFranchise && (
+  <option value="admin">Admin</option>
+)}
                 </select>
               </div>
-              {company?.plan === "Business" && newUserRole !== "admin" && (
+{!isFranchise &&
+ company?.plan === "Business" &&
+ newUserRole !== "admin" && (
   <div>
     <label className="block text-[13px] font-semibold text-[#212529] mb-2">
       Location
@@ -366,13 +372,13 @@ useEffect(() => {
                 className="w-full px-3 py-2 border border-[#DEE2E6] rounded-md text-[13px] focus:outline-none focus:border-[#000000]"
               >
                 <option value="">All Roles</option>
-                <option value="admin">Admin</option>
+               {!isFranchise && <option value="admin">Admin</option>}
 
-                {company?.plan === "Business" && (
-                  <option value="manager">Manager</option>
-                )}
+{!isFranchise && company?.plan === "Business" && (
+  <option value="manager">Manager</option>
+)}
 
-                <option value="staff">Staff</option>
+<option value="staff">Staff</option>
               </select>
             </div>
 

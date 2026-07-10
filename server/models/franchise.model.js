@@ -30,10 +30,20 @@ const franchiseSchema = new mongoose.Schema(
       trim: true,
     },
 
+    password: {
+      type: String,
+      required: true,
+    },
+
     phone: {
       type: String,
       required: true,
       trim: true,
+    },
+
+    lastLogin: {
+      type: Date,
+      default: null,
     },
 
     address: {

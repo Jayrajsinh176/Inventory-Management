@@ -29,17 +29,39 @@ export const AuthService = {
     localStorage.setItem("company", JSON.stringify(company));
   },
 
+  // Login Type
+setLoginType: (type) => {
+  localStorage.setItem("loginType", type);
+},
+
+getLoginType: () => {
+  return localStorage.getItem("loginType");
+},
+
+// Franchise
+setFranchise: (franchise) => {
+  localStorage.setItem("franchise", JSON.stringify(franchise));
+},
+
+getFranchise: () => {
+  const franchise = localStorage.getItem("franchise");
+  return franchise ? JSON.parse(franchise) : null;
+},
+
+
   getCompany: () => {
     const company = localStorage.getItem("company");
     return company ? JSON.parse(company) : null;
   },
 
   // Clear all auth data
-  clearAuth: () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("user");
-    localStorage.removeItem("company");
-  },
+clearAuth: () => {
+  localStorage.removeItem("authToken");
+  localStorage.removeItem("user");
+  localStorage.removeItem("company");
+  localStorage.removeItem("franchise");
+  localStorage.removeItem("loginType");
+},
 
   // Check if authenticated
   isAuthenticated: () => {
@@ -120,10 +142,42 @@ export async function loginUser(email, phone, password) {
     AuthService.setToken(data.token);
     AuthService.setUser(data.user);
     AuthService.setCompany(data.company);
+    AuthService.setLoginType("company");
   }
 
   return data;
 }
+
+
+
+export async function loginFranchise(email, password) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/franchise-auth/login`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email,
+        password,
+      }),
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Login failed");
+  }
+
+  AuthService.setToken(data.token);
+  AuthService.setFranchise(data.franchise);
+  AuthService.setLoginType("franchise");
+
+  return data;
+}
+
 
 /**
  * Logout user - clear auth data
@@ -1399,6 +1453,52 @@ export async function getFranchiseLocations() {
   if (!response.ok) {
     throw new Error(
       data.message || "Failed to fetch franchise locations"
+    );
+  }
+
+  return data;
+}
+
+export async function addStock(productId, stockData) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/products/${productId}/add-stock`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
+      body: JSON.stringify(stockData),
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to add stock");
+  }
+
+  return data;
+}
+
+export async function transferStock(transferData) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/stock-transfers`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...AuthService.getAuthHeader(),
+      },
+      body: JSON.stringify(transferData),
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.message || "Failed to transfer stock"
     );
   }
 

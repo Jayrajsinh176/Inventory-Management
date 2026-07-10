@@ -8,14 +8,16 @@ import Header from "../../components/dashboard/Header";
 const AddFranchisePage = () => {
   const navigate = useNavigate();
 
-const [formData, setFormData] = useState({
-  company_name: "",
-  name: "",
-  email: "",
-  phone: "",
-  gstNumber: "",
-  address: "",
-});
+  const [formData, setFormData] = useState({
+    company_name: "",
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    phone: "",
+    gstNumber: "",
+    address: "",
+  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -34,25 +36,34 @@ const [formData, setFormData] = useState({
     }
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  try {
-    const response = await createFranchise(formData);
+    if (formData.password.length < 6) {
+      toast.error("Password must be at least 6 characters.");
+      return;
+    }
 
-    console.log("Franchise Response:", response);
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Passwords do not match.");
+      return;
+    }
 
-    toast.success(response.message);
+    try {
+      const response = await createFranchise(formData);
 
-    setTimeout(() => {
-      navigate("/franchises");
-    }, 1000); // 1 second delay
-  } catch (error) {
-    console.error("Create Location Error:", error);
+      console.log("Franchise Response:", response);
 
-    toast.error(error.message);
-  }
-};
+      toast.success(response.message);
+
+      setTimeout(() => {
+        navigate("/franchises");
+      }, 1000);
+    } catch (error) {
+      console.error("Create Location Error:", error);
+      toast.error(error.message);
+    }
+  };
 
   const inputClass =
     "w-full h-[40px] px-3 bg-[#F8F9FA] border border-[#DEE2E6] rounded-lg text-[14px] text-[#212529] placeholder-[#ADB5BD] focus:outline-none focus:border-black focus:bg-white transition";
@@ -75,7 +86,7 @@ const handleSubmit = async (e) => {
           {/* Page Header */}
           <div className="mb-8">
             <h1 className="text-[28px] font-bold text-[#212529]">
-      Add Location
+              Add Location
             </h1>
 
             <p className="text-[14px] text-[#6C757D] mt-1">
@@ -90,7 +101,7 @@ const handleSubmit = async (e) => {
                 {/* Location Name */}
                 <div>
                   <label className={labelClass}>
-                Location Name *
+                    Location Name *
                   </label>
 
                   <input
@@ -106,7 +117,7 @@ const handleSubmit = async (e) => {
                 {/* Manager Name */}
                 <div>
                   <label className={labelClass}>
-            Manager Name *
+                    Manager Name *
                   </label>
 
                   <input
@@ -130,10 +141,11 @@ const handleSubmit = async (e) => {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                   placeholder="manager@company.com"
+                    placeholder="manager@company.com"
                     className={inputClass}
                   />
                 </div>
+
 
                 {/* Phone */}
                 <div>
@@ -151,6 +163,35 @@ const handleSubmit = async (e) => {
                     className={inputClass}
                   />
                 </div>
+                <div>
+                  <label className={labelClass}>
+                    Password *
+                  </label>
+
+                  <input
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="Enter password"
+                    className={inputClass}
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Confirm Password *
+                  </label>
+
+                  <input
+                    type="password"
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    placeholder="Confirm password"
+                    className={inputClass}
+                  />
+                </div>
 
                 {/* GST */}
                 <div>
@@ -160,8 +201,8 @@ const handleSubmit = async (e) => {
 
                   <input
                     type="text"
-                 name="gstNumber"
-value={formData.gstNumber}
+                    name="gstNumber"
+                    value={formData.gstNumber}
                     onChange={handleChange}
                     placeholder="24ABCDE1234F1Z5"
                     className={inputClass}
@@ -171,7 +212,7 @@ value={formData.gstNumber}
                 {/* Address */}
                 <div className="md:col-span-2">
                   <label className={labelClass}>
-                   Location Address
+                    Location Address
                   </label>
 
                   <textarea

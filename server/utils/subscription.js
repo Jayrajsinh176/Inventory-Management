@@ -88,7 +88,7 @@ export const canAddUsersToPlan = (planName, currentCount) => {
 
 export const canAddLocationToPlan = (planName, currentCount) => {
   const plan = getSubscriptionPlan(planName);
-  return currentCount < plan.maxLocations;
+  return currentCount <= plan.maxLocations;
 };
 
 export const formatPlanProductLimit = (planName) => {

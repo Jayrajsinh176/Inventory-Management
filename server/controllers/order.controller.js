@@ -3,7 +3,8 @@ import Order from "../models/order.model.js";
 import Invoice from "../models/invoice.model.js";
 import Product from "../models/product.model.js";
 import Company from "../models/company.model.js";
-
+import LocationStock from "../models/locationStock.model.js";
+import Franchise from "../models/franchise.model.js";
 /** 
  * @description Create a new order
  * @route POST /api/orders
@@ -67,17 +68,41 @@ export const createOrder = async (req, res) => {
             if (!product) {
                 return res.status(404).json({ message: `Product ${item.product} not found` });
             }
-            if (product.stock < item.quantity) {
-                return res.status(400).json({
-                    message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`
-                });
-            }
-        }
+          const mainStore = await Franchise.findOne({
+    company: req.user.company,
+    isDefault: true,
+});
 
-        const order = new Order({
-            company: req.user.company,
-            locationId: req.user.locationId,
-            user: req.user._id,
+const locationId =
+    req.user.role === "franchise"
+        ? req.user.locationId
+        : mainStore?._id;
+
+const locationStock = await LocationStock.findOne({
+    company: req.user.company,
+    locationId,
+    product: item.product,
+});
+
+if (!locationStock || locationStock.stock < item.quantity) {
+    return res.status(400).json({
+        message: `Insufficient stock for ${product.name}. Available: ${
+            locationStock?.stock || 0
+        }, Requested: ${item.quantity}`,
+    });
+}
+        }
+const isFranchise = req.user.role === "franchise";
+
+const order = new Order({
+    company: req.user.company,
+
+    franchise: isFranchise ? req.user.franchise : null,
+    createdBy: isFranchise ? "franchise" : "company",
+
+   locationId: isFranchise ? req.user.locationId : mainStore?._id,
+
+    user: req.user._id,
             orderNumber,
             items: normalizedItems,
             subtotal,
@@ -102,16 +127,46 @@ export const createOrder = async (req, res) => {
         });
         await order.save();
 
-        for (const item of normalizedItems) {
-            const product = await Product.findById(item.product);
-            product.stock -= item.quantity;
-            order.stockAdjustments.push({
-                productId: item.product,
-                quantity: item.quantity,
-                adjustedAt: new Date()
+//         const mainStore = await Franchise.findOne({
+//     company: req.user.company,
+//     isDefault: true,
+// });
+
+for (const item of normalizedItems) {
+
+    const product = await Product.findById(item.product);
+
+const locationId =
+    req.user.role === "franchise"
+        ? req.user.locationId
+        : mainStore?._id;
+
+    if (locationId) {
+
+        const locationStock = await LocationStock.findOne({
+            company: req.user.company,
+            locationId,
+            product: item.product,
+        });
+
+        if (!locationStock || locationStock.stock < item.quantity) {
+            return res.status(400).json({
+                success: false,
+                message: `Insufficient stock for ${product.name}`,
             });
-            await product.save();
         }
+
+        locationStock.stock -= item.quantity;
+
+        await locationStock.save();
+    }
+
+    order.stockAdjustments.push({
+        productId: item.product,
+        quantity: item.quantity,
+        adjustedAt: new Date(),
+    });
+}
 
         let invoice = null;
         if (resolvedPaymentStatus === 'paid' || paymentMethod === 'online') {
@@ -120,6 +175,7 @@ export const createOrder = async (req, res) => {
 
             invoice = new Invoice({
                 company: req.user.company,
+                   franchise: isFranchise ? req.user.franchise : null,
                 user: req.user._id,
                 invoiceNumber,
                 order: order._id,
@@ -169,8 +225,13 @@ export const createOrder = async (req, res) => {
 export const getOrders = async (req, res) => {
     try {
         const { status, paymentStatus, search, sortBy = '-createdAt', page = 1, limit = 10 } = req.query;
+const filters = {
+    company: req.user.company,
+};
 
-        const filters = { company: req.user.company };
+if (req.user.role === "franchise") {
+    filters.franchise = req.user.franchise;
+}
 
         if (status) filters.status = status;
         if (search) {
@@ -272,7 +333,16 @@ export const getOrderById = async (req, res) => {
             return res.status(400).json({ message: "Invalid order ID" });
         }
 
-        const order = await Order.findById(id)
+      const query = {
+    _id: id,
+    company: req.user.company,
+};
+
+if (req.user.role === "franchise") {
+    query.franchise = req.user.franchise;
+}
+
+const order = await Order.findOne(query)
             .populate([
                 { path: 'company', select: 'name' },
                 { path: 'user', select: 'name email' },
@@ -282,11 +352,6 @@ export const getOrderById = async (req, res) => {
 
         if (!order) {
             return res.status(404).json({ message: "Order not found" });
-        }
-
-        // Authorization check - ensure user belongs to the company
-        if (order.company._id.toString() !== req.user.company.toString()) {
-            return res.status(403).json({ message: "Not authorized to access this order" });
         }
 
         res.status(200).json({
@@ -315,13 +380,21 @@ export const updateOrder = async (req, res) => {
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ message: "Invalid order ID" });
         }
-        const order = await Order.findById(id);
+      const query = {
+    _id: id,
+    company: req.user.company,
+};
+
+if (req.user.role === "franchise") {
+    query.franchise = req.user.franchise;
+}
+
+const order = await Order.findOne(query);
+
         if (!order) {
             return res.status(404).json({ message: "Order not found" });
         }
-        if (order.company.toString() !== req.user.company.toString()) {
-            return res.status(403).json({ message: "Not authorized to update this order" });
-        }
+       
         if (status) {
             const validStatuses = ['pending', 'processing', 'completed', 'cancelled', 'failed'];
             if (!validStatuses.includes(status)) {
@@ -390,6 +463,12 @@ export const updateOrder = async (req, res) => {
  * @access Protected
  */
 export const deleteOrder = async (req, res) => {
+    if (req.user.role === "franchise") {
+    return res.status(403).json({
+        success: false,
+        message: "Only Company Admin can delete orders.",
+    });
+}
     try {
         const { id } = req.params;
 
@@ -397,13 +476,19 @@ export const deleteOrder = async (req, res) => {
             return res.status(400).json({ message: "Invalid order ID" });
         }
 
-        const order = await Order.findById(id);
+const query = {
+    _id: id,
+    company: req.user.company,
+};
+
+if (req.user.role === "franchise") {
+    query.franchise = req.user.franchise;
+}
+
+const order = await Order.findOne(query);
 
         if (!order) {
             return res.status(404).json({ message: "Order not found" });
-        }
-        if (order.company.toString() !== req.user.company.toString()) {
-            return res.status(403).json({ message: "Not authorized to delete this order" });
         }
         if (!['pending', 'processing'].includes(order.status)) {
             return res.status(400).json({
@@ -413,8 +498,31 @@ export const deleteOrder = async (req, res) => {
         for (const item of order.items) {
             const product = await Product.findById(item.product);
             if (product) {
-                product.stock += item.quantity;
-                await product.save();
+
+
+const mainStore = await Franchise.findOne({
+    company: req.user.company,
+    isDefault: true,
+});
+
+const locationId =
+    req.user.role === "franchise"
+        ? req.user.locationId
+        : mainStore?._id;
+
+if (locationId) {
+
+    const locationStock = await LocationStock.findOne({
+        company: req.user.company,
+        locationId,
+        product: item.product,
+    });
+
+    if (locationStock) {
+        locationStock.stock += item.quantity;
+        await locationStock.save();
+    }
+}
             }
         }
         order.status = 'cancelled';
@@ -451,10 +559,12 @@ export const getOrderStats = async (req, res) => {
 
         const filters = { company: req.user.company };
 
+        if (req.user.role === "franchise") {
+    filters.franchise = req.user.franchise;
+}
 
-        const orders = await Order.find({
-            company: req.user.company
-        });
+
+   const orders = await Order.find(filters);
 
         console.log("Orders Found:", orders.length);
 
@@ -463,7 +573,13 @@ export const getOrderStats = async (req, res) => {
             if (dateFrom) filters.createdAt.$gte = new Date(dateFrom);
             if (dateTo) filters.createdAt.$lte = new Date(dateTo);
         }
+const matchStage = {
+    company: new mongoose.Types.ObjectId(req.user.company),
+};
 
+if (req.user.role === "franchise") {
+    matchStage.franchise = new mongoose.Types.ObjectId(req.user.franchise);
+}
         const [
             totalOrders,
             totalRevenue,
@@ -475,9 +591,7 @@ export const getOrderStats = async (req, res) => {
             Order.countDocuments(filters),
             Order.aggregate([
                 {
-                    $match: {
-                        company: new mongoose.Types.ObjectId(req.user.company)
-                    }
+                         $match: matchStage
                 },
                 {
                     $group: {
@@ -499,14 +613,20 @@ today.setHours(0, 0, 0, 0);
 const tomorrow = new Date(today);
 tomorrow.setDate(tomorrow.getDate() + 1);
 
-const todayOrders = await Order.find({
+const todayFilter = {
     company: req.user.company,
     paymentStatus: "paid",
     createdAt: {
         $gte: today,
         $lt: tomorrow,
     },
-});
+};
+
+if (req.user.role === "franchise") {
+    todayFilter.franchise = req.user.franchise;
+}
+
+const todayOrders = await Order.find(todayFilter);
 
 const todayRevenue = todayOrders.reduce(
     (sum, order) => sum + (order.total || 0),
@@ -573,14 +693,20 @@ export const getDailySalesSummary = async (req, res) => {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const orders = await Order.find({
-      company: req.user.company,
-      paymentStatus: "paid",
-      createdAt: {
+ const filters = {
+    company: req.user.company,
+    paymentStatus: "paid",
+    createdAt: {
         $gte: today,
         $lt: tomorrow,
-      },
-    });
+    },
+};
+
+if (req.user.role === "franchise") {
+    filters.franchise = req.user.franchise;
+}
+
+const orders = await Order.find(filters);
 
     const totalOrders = orders.length;
 

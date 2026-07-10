@@ -8,6 +8,22 @@ const productSchema = new mongoose.Schema(
       required: true,
     },
 
+  // NEW
+    franchise: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Franchise",
+      default: null,
+    },
+
+    // NEW
+    createdBy: {
+      type: String,
+      enum: ["company", "franchise"],
+      required: true,
+    },
+
+
+
     name: {
       type: String,
       required: [true, "Product name is required"],

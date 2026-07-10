@@ -5,16 +5,19 @@ import {
   MdImage,
   MdSearch,
   MdInventory,
+  MdSwapHoriz,
 } from "react-icons/md";
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
 import toast from 'react-hot-toast';
-import { deleteProduct, getCategories, getProducts, getOrderStats } from '../../api';
+import { deleteProduct, getCategories, getProducts, getOrderStats, addStock, transferStock, getFranchises, } from '../../api';
 import ConfirmationModal from '../common/ConfirmationModal';
 import { AuthService } from "../../api";
 
+const loginType = AuthService.getLoginType();
 const company = AuthService.getCompany();
 const currentPlan = company?.plan || "Basic";
+const isFranchise = loginType === "franchise";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -217,6 +220,15 @@ const ProductsTable = ({ onProductsChanged }) => {
   const [editingStockValue, setEditingStockValue] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showAddStockModal, setShowAddStockModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+
+  const [franchises, setFranchises] = useState([]);
+
+  const [transferData, setTransferData] = useState({
+    toLocationId: "",
+    quantity: "",
+    notes: "",
+  });
   const limit = 10;
   const totalPages = Math.ceil(totalCount / limit);
   const visiblePageCount = Math.min(3, totalPages);
@@ -230,6 +242,11 @@ const ProductsTable = ({ onProductsChanged }) => {
       : Array.from({ length: visiblePageCount }, (_, index) => firstVisiblePage + index);
   const showingFrom = products.length > 0 ? (currentPage - 1) * limit + 1 : 0;
   const showingTo = products.length > 0 ? showingFrom + products.length - 1 : 0;
+  const [stockData, setStockData] = useState({
+    quantity: "",
+    reason: "Purchase",
+    notes: "",
+  });
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -245,6 +262,48 @@ const ProductsTable = ({ onProductsChanged }) => {
 
     fetchCategories();
   }, []);
+
+useEffect(() => {
+const loginType = AuthService.getLoginType();
+
+if (currentPlan !== "Business" && loginType !== "franchise") {
+  return;
+}
+
+  const fetchLocations = async () => {
+    try {
+      const response = await getFranchises();
+
+      // 👇 ADD THESE LOGS
+      console.log("Full Response:", response);
+      console.log("Response Data:", response.data);
+
+      const loginType = AuthService.getLoginType();
+      const franchise = AuthService.getFranchise();
+
+      console.log("Login Type:", loginType);
+      console.log("Current Franchise:", franchise);
+
+      let locations = response.data;
+
+      console.log("Before Filter:", locations);
+
+      if (loginType === "franchise") {
+        locations = locations.filter(
+          (location) => location._id !== franchise._id
+        );
+      }
+
+      console.log("After Filter:", locations);
+
+      setFranchises(locations);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  fetchLocations();
+}, []);
 
   useEffect(() => {
     if (totalPages > 0 && currentPage > totalPages) {
@@ -339,9 +398,120 @@ const ProductsTable = ({ onProductsChanged }) => {
     setEditingStockId(product.id);
     setEditingStockValue(product.stock.toString());
   };
+
   const handleAddStock = (product) => {
     setSelectedProduct(product);
+
+    setStockData({
+      quantity: "",
+      reason: "Purchase",
+      notes: "",
+    });
+
     setShowAddStockModal(true);
+  };
+
+  const handleTransferStock = (product) => {
+    setSelectedProduct(product);
+
+    setTransferData({
+      toLocationId: "",
+      quantity: "",
+      notes: "",
+    });
+
+    setShowTransferModal(true);
+  };
+
+  const handleSubmitStock = async () => {
+    if (!stockData.quantity || Number(stockData.quantity) <= 0) {
+      toast.error("Please enter a valid quantity.");
+      return;
+    }
+
+    try {
+      const response = await addStock(
+        selectedProduct.id,
+        stockData
+      );
+
+      toast.success(response.message);
+
+      // Refresh current page
+      const productsResponse = await getProducts({
+        page: currentPage,
+        limit,
+        search: searchTerm,
+        category: categoryFilter,
+      });
+
+      setProducts(productsResponse.products || []);
+      setTotalCount(productsResponse.count || 0);
+
+      onProductsChanged?.();
+
+      setShowAddStockModal(false);
+      setSelectedProduct(null);
+
+      setStockData({
+        quantity: "",
+        reason: "Purchase",
+        notes: "",
+      });
+
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message);
+    }
+  };
+
+  const handleSubmitTransfer = async () => {
+    if (!transferData.toLocationId) {
+      toast.error("Please select a location.");
+      return;
+    }
+
+    if (!transferData.quantity || Number(transferData.quantity) <= 0) {
+      toast.error("Please enter a valid quantity.");
+      return;
+    }
+
+    try {
+      const response = await transferStock({
+        productId: selectedProduct.id,
+        toLocationId: transferData.toLocationId,
+        quantity: Number(transferData.quantity),
+        notes: transferData.notes,
+      });
+
+      toast.success(response.message);
+
+      // Refresh products
+      const productsResponse = await getProducts({
+        page: currentPage,
+        limit,
+        search: searchTerm,
+        category: categoryFilter,
+      });
+
+      setProducts(productsResponse.products || []);
+      setTotalCount(productsResponse.count || 0);
+
+      onProductsChanged?.();
+
+      setShowTransferModal(false);
+      setSelectedProduct(null);
+
+      setTransferData({
+        toLocationId: "",
+        quantity: "",
+        notes: "",
+      });
+
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message);
+    }
   };
 
   const handleStockSave = (productId) => {
@@ -631,6 +801,16 @@ const ProductsTable = ({ onProductsChanged }) => {
                             <MdInventory className="text-[20px]" />
                           </button>
 
+                       {(currentPlan === "Business" || isFranchise) && (
+                            <button
+                              onClick={() => handleTransferStock(product)}
+                              className="text-[#0D6EFD] hover:text-[#0A58CA] transition-colors"
+                              title="Transfer Stock"
+                            >
+                              <MdSwapHoriz className="text-[20px]" />
+                            </button>
+                          )}
+
                           <button
                             onClick={() => handleDetails(product.id)}
                             className="px-2 py-1 border border-[#DEE2E6] rounded text-[12px] font-semibold text-[#212529] hover:bg-[#F8F9FA] transition-colors"
@@ -691,6 +871,279 @@ const ProductsTable = ({ onProductsChanged }) => {
           onCancel={onCancelDelete}
           isDangerous={true}
         />
+
+        {/* Add Stock Modal */}
+
+        {showAddStockModal && selectedProduct && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+
+              <h2 className="text-xl font-bold mb-5">
+                Add Stock
+              </h2>
+
+              <div className="space-y-4">
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Product
+                  </label>
+
+                  <input
+                    type="text"
+                    value={selectedProduct.name}
+                    disabled
+                    className="w-full border rounded-lg px-3 py-2 bg-gray-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Current Stock
+                  </label>
+
+                  <input
+                    type="text"
+                    value={selectedProduct.stock}
+                    disabled
+                    className="w-full border rounded-lg px-3 py-2 bg-gray-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Quantity to Add
+                  </label>
+
+                  <input
+                    type="number"
+                    min="1"
+                    value={stockData.quantity}
+                    onChange={(e) =>
+                      setStockData((prev) => ({
+                        ...prev,
+                        quantity: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter quantity"
+                    className="w-full border rounded-lg px-3 py-2"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Reason
+                  </label>
+
+                  <select
+                    value={stockData.reason}
+                    onChange={(e) =>
+                      setStockData((prev) => ({
+                        ...prev,
+                        reason: e.target.value,
+                      }))
+                    }
+                    className="w-full border rounded-lg px-3 py-2"
+                  >
+                    <option value="Purchase">Purchase</option>
+                    <option value="Return">Return</option>
+                    <option value="Manual Adjustment">Manual Adjustment</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Notes
+                  </label>
+
+                  <textarea
+                    rows={3}
+                    value={stockData.notes}
+                    onChange={(e) =>
+                      setStockData((prev) => ({
+                        ...prev,
+                        notes: e.target.value,
+                      }))
+                    }
+                    placeholder="Optional notes..."
+                    className="w-full border rounded-lg px-3 py-2 resize-none"
+                  />
+                </div>
+
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+
+                <button
+                  onClick={() => {
+                    setShowAddStockModal(false);
+                    setSelectedProduct(null);
+
+                    setStockData({
+                      quantity: "",
+                      reason: "Purchase",
+                      notes: "",
+                    });
+                  }}
+                  className="px-4 py-2 border rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitStock}
+                  className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  Add Stock
+                </button>
+
+              </div>
+
+            </div>
+          </div>
+        )}
+
+
+        {/* Transfer Stock Modal */}
+
+        {showTransferModal && selectedProduct && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+
+              <h2 className="text-xl font-bold mb-5">
+                Transfer Stock
+              </h2>
+
+              <div className="space-y-4">
+
+                {/* Product */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Product
+                  </label>
+
+                  <input
+                    type="text"
+                    value={selectedProduct.name}
+                    disabled
+                    className="w-full border rounded-lg px-3 py-2 bg-gray-100"
+                  />
+                </div>
+
+                {/* Current Stock */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Current Main Store Stock
+                  </label>
+
+                  <input
+                    type="text"
+                    value={selectedProduct.stock}
+                    disabled
+                    className="w-full border rounded-lg px-3 py-2 bg-gray-100"
+                  />
+                </div>
+
+                {/* Destination */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Transfer To
+                  </label>
+
+                  <select
+                    value={transferData.toLocationId}
+                    onChange={(e) =>
+                      setTransferData((prev) => ({
+                        ...prev,
+                        toLocationId: e.target.value,
+                      }))
+                    }
+                    className="w-full border rounded-lg px-3 py-2"
+                  >
+                    <option value="">Select Location</option>
+
+                    {franchises.map((location) => (
+                      <option
+                        key={location._id}
+                        value={location._id}
+                      >
+                       {location.company_name || location.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Quantity */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Quantity
+                  </label>
+
+                  <input
+                    type="number"
+                    min="1"
+                    value={transferData.quantity}
+                    onChange={(e) =>
+                      setTransferData((prev) => ({
+                        ...prev,
+                        quantity: e.target.value,
+                      }))
+                    }
+                    className="w-full border rounded-lg px-3 py-2"
+                  />
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Notes
+                  </label>
+
+                  <textarea
+                    rows={3}
+                    value={transferData.notes}
+                    onChange={(e) =>
+                      setTransferData((prev) => ({
+                        ...prev,
+                        notes: e.target.value,
+                      }))
+                    }
+                    placeholder="Optional notes..."
+                    className="w-full border rounded-lg px-3 py-2 resize-none"
+                  />
+                </div>
+
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+
+                <button
+                  onClick={() => {
+                    setShowTransferModal(false);
+                    setSelectedProduct(null);
+
+                    setTransferData({
+                      toLocationId: "",
+                      quantity: "",
+                      notes: "",
+                    });
+                  }}
+                  className="px-4 py-2 border rounded-lg"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={handleSubmitTransfer}
+                  className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Transfer
+                </button>
+
+              </div>
+
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

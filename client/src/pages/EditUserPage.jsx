@@ -14,6 +14,8 @@ import {
 const EditUserPage = () => {
 
   const company = AuthService.getCompany();
+  const loginType = AuthService.getLoginType();
+const isFranchise = loginType === "franchise";
   const [locations, setLocations] = useState([]);
   const navigate = useNavigate();
   const { userId } = useParams();
@@ -32,7 +34,7 @@ const EditUserPage = () => {
   useEffect(() => {
     const fetchLocations = async () => {
       try {
-        if (company?.plan === "Business") {
+      if (company?.plan === "Business" && !isFranchise) { 
           const response = await getFranchiseLocations();
           setLocations(response.locations || []);
         }
@@ -89,11 +91,12 @@ const EditUserPage = () => {
       !formData.name ||
       !formData.email ||
       !formData.phone ||
-      (
-        company?.plan === "Business" &&
-        formData.role !== "admin" &&
-        !formData.locationId
-      )
+     (
+  company?.plan === "Business" &&
+  !isFranchise &&
+  formData.role !== "admin" &&
+  !formData.locationId
+)
     ) {
       toast.error('Please fill in all required fields');
       return;
@@ -101,7 +104,10 @@ const EditUserPage = () => {
 
     setUpdatingUser(true);
     try {
-      await updateUser(userId, formData);
+    await updateUser(userId, {
+  ...formData,
+  ...(isFranchise ? {} : { locationId: formData.locationId }),
+});
       toast.success('User updated successfully!');
       navigate('/users');
     } catch (err) {
@@ -239,16 +245,21 @@ const EditUserPage = () => {
                       disabled={updatingUser}
                       className="w-full h-11 bg-white border border-[#DEE2E6] rounded-lg px-4 text-[14px] text-[#212529] focus:outline-none focus:border-[#000000] transition-colors appearance-none cursor-pointer disabled:opacity-50"
                     >
-                      <option value="staff">Staff</option>
-                      {company?.plan === "Business" && (
-                        <option value="manager">Manager</option>
-                      )}
-                      <option value="admin">Admin</option>
+                 <option value="staff">Staff</option>
+
+{!isFranchise && company?.plan === "Business" && (
+  <option value="manager">Manager</option>
+)}
+
+{!isFranchise && (
+  <option value="admin">Admin</option>
+)}
                     </select>
                   </div>
 
-                  {company?.plan === "Business" &&
-                    formData.role !== "admin" && (
+                {!isFranchise &&
+  company?.plan === "Business" &&
+  formData.role !== "admin" && (
                       <div>
                         <label className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6C757D] mb-2">
                           Location

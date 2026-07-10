@@ -12,6 +12,7 @@ import {
   getLowStock,
   getProductsByCategory,
    importProducts,
+     addStock,
 } from "../controllers/product.controller.js";
 import {
   uploadProductImage,
@@ -40,6 +41,13 @@ router.put(
   uploadProductImage.single("image"),
   updateProduct
 );
+
+router.patch(
+  "/:id/add-stock",
+  protect,
+  addStock
+);
+
 router.delete("/:id", protect, deleteProduct);
 router.get("/vendor/:vendorName", protect, getProductsByVendor);
 router.post(

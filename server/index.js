@@ -29,6 +29,8 @@ import startTrialExpiryWatcher from "./jobs/checkTrialExpiry.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
 import billingRoutes from "./routes/billing.routes.js";
 import franchiseRoutes from "./routes/franchise.routes.js";
+import stockTransferRoutes from "./routes/stockTransfer.routes.js";
+import franchiseAuthRoutes from "./routes/franchiseAuth.routes.js";
 // validate environment before starting server
 // check .env file there are variable assign or not
 validateEnv();
@@ -99,6 +101,9 @@ app.use("/api/vendor", vendorRoutes);
 app.use("/api/billing", billingRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/franchises", franchiseRoutes);
+app.use("/api/stock-transfers", stockTransferRoutes);
+app.use("/api/franchise-auth", franchiseAuthRoutes);
+
 
 
 // Return useful JSON when an image is rejected by Multer (invalid type, too

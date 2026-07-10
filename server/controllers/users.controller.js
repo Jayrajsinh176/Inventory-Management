@@ -50,22 +50,46 @@ const handleStaffError = (res, error) => {
  */
 export const getUsersDetails = async (req, res) => {
   try {
-   const users = await User.find({
-  company: req.user.company,
-})
-  .populate("locationId", "name")
-  .select("-password")
-  .lean();
+    console.log("Logged User:", req.user);
+    console.log("Role:", req.user.role);
 
-    res.status(200).json({
+    let query = {
+      company: req.user.company,
+    };
+
+    // Franchise Manager -> only users of that location
+    if (req.user.role === "franchise") {
+      query.locationId = req.user.locationId;
+    }
+
+    console.log("Query:", query);
+
+    const users = await User.find(query)
+      .populate("locationId", "name")
+      .select("-password")
+      .lean();
+
+    users.forEach((u) => {
+      console.log({
+        name: u.name,
+        role: u.role,
+        locationId: u.locationId?._id || u.locationId,
+        locationName: u.locationId?.name || null,
+      });
+    });
+
+    return res.status(200).json({
       success: true,
       count: users.length,
       data: users,
     });
+
   } catch (error) {
-    res.status(500).json({
+    console.error(error);
+
+    return res.status(500).json({
       success: false,
-      message: "Internal server error",
+      message: error.message,
     });
   }
 };
@@ -79,10 +103,16 @@ export const getUserById = async (req, res) => {
   try {
     const userId = req.params.id;
 
-  const user = await User.findOne({
+let query = {
   _id: userId,
   company: req.user.company,
-})
+};
+
+if (req.user.role === "franchise") {
+  query.locationId = req.user.locationId;
+}
+
+const user = await User.findOne(query)
   .populate("locationId", "name")
   .select("-password")
   .lean();
@@ -123,15 +153,29 @@ export const addUsers = async (req, res) => {
         message: "Company not found.",
       });
     }
+let query = {
+  company: req.user.company,
+};
 
-    const users = await User.find({
-      company: req.user.company,
-    })
-      .select("-password")
-      .lean();
+// Franchise Manager → Only users from their own location
+if (req.user.role === "franchise") {
+  query.locationId = req.user.locationId;
+}
+
+const users = await User.find(query)
+  .populate("locationId", "name")
+  .select("-password")
+  .lean();
 
     if (canAddUsersToPlan(companyPlanDetails.plan, users.length)) {
     let { name, email, phone, role, locationId } = req.body;
+
+    // Franchise Manager
+if (req.user.role === "franchise") {
+  role = "staff";
+  locationId = req.user.locationId;
+}
+
       name = name?.trim();
       email = email?.trim().toLowerCase();
       phone = phone?.trim();
@@ -151,12 +195,14 @@ export const addUsers = async (req, res) => {
         });
       }
 
-    if (!["admin", "manager", "staff"].includes(role)) {
+if (!["admin", "manager", "staff"].includes(role)) {
   return res.status(400).json({
     success: false,
     message: "Invalid role.",
   });
-  // Only one Admin is allowed per company
+}
+
+// Only one Admin is allowed per company
 if (role === "admin") {
   const existingAdmin = await User.findOne({
     company: req.user.company,
@@ -169,8 +215,6 @@ if (role === "admin") {
       message: "Only one Admin is allowed per company.",
     });
   }
-}
-
 }
 
 if (companyPlanDetails.plan !== "Business" && role === "manager") {
@@ -354,13 +398,23 @@ if (companyPlanDetails.plan === "Business") {
   }
 }
 
-    const user = await User.findOneAndUpdate(
-      
+let updateQuery = {
+  _id: id,
+  company: req.user.company,
+};
 
-      {
-        _id: id,
-        company: req.user.company,
-      },
+// Franchise Manager can update only users of their location
+if (req.user.role === "franchise") {
+  updateQuery.locationId = req.user.locationId;
+
+  // Cannot change role or location
+  role = undefined;
+  locationId = req.user.locationId;
+}
+
+    const user = await User.findOneAndUpdate(
+
+    updateQuery,
       {
       $set: {
   name,
@@ -425,10 +479,16 @@ export const deactivateUser = async (req, res) => {
         message: "Invalid user id.",
       });
     }
-    const user = await User.findOne({
-      _id: id,
-      company: req.user.company,
-    })
+let query = {
+  _id: id,
+  company: req.user.company,
+};
+
+if (req.user.role === "franchise") {
+  query.locationId = req.user.locationId;
+}
+
+const user = await User.findOne(query)
       .select("-password")
       .lean();
 
@@ -485,10 +545,16 @@ export const activateUser = async (req, res) => {
         message: "Invalid user id.",
       });
     }
-    const user = await User.findOne({
-      _id: id,
-      company: req.user.company,
-    })
+let query = {
+  _id: id,
+  company: req.user.company,
+};
+
+if (req.user.role === "franchise") {
+  query.locationId = req.user.locationId;
+}
+
+const user = await User.findOne(query)
       .select("-password")
       .lean();
 
@@ -544,10 +610,16 @@ export const deleteUser = async (req, res) => {
         message: "Invalid user id.",
       });
     }
-    const user = await User.findOneAndDelete({
-      _id: id,
-      company: req.user.company,
-    });
+let query = {
+  _id: id,
+  company: req.user.company,
+};
+
+if (req.user.role === "franchise") {
+  query.locationId = req.user.locationId;
+}
+
+const user = await User.findOneAndDelete(query);
 
     if (!user) {
       return res.status(404).json({

@@ -6,6 +6,12 @@ const invoiceSchema = new mongoose.Schema({
         ref : 'Company',
         required : true,
     },
+franchise: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Franchise",
+    default: null,
+},
+
     user : {
         type : mongoose.Schema.Types.ObjectId,
         ref : 'User',

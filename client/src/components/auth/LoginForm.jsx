@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MdError, MdVisibility, MdVisibilityOff, MdLock, MdEmail } from 'react-icons/md';
-import { loginUser } from '../../api';
+import { loginUser, loginFranchise } from '../../api';
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -13,7 +13,7 @@ const LoginForm = () => {
 
   const handleIdentifierChange = (e) => {
     const value = e.target.value;
-    
+
     // If contains @ or has letters/dots (email pattern), treat as email - allow any input
     if (value.includes('@') || /[a-zA-Z.]/.test(value)) {
       setIdentifier(value);
@@ -26,24 +26,42 @@ const LoginForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     setLoading(true);
-    setError('');
+    setError("");
 
-    try {
-      const isEmail = identifier.includes('@');
+try {
+  const isEmail = identifier.includes("@");
 
-      const response = await loginUser(
-        isEmail ? identifier : null, // email
-        !isEmail ? identifier : null, // phone
-        password
-      );
+  console.log("Trying company login...");
 
-      // Success - redirect to dashboard
-      navigate('/dashboard');
-    } catch (err) {
-      setError(err.message || 'Login failed. Please try again.');
-      setLoading(false);
-    }
+  await loginUser(
+    isEmail ? identifier : null,
+    !isEmail ? identifier : null,
+    password
+  );
+
+  console.log("Company login success");
+
+  navigate("/dashboard");
+} catch (err) {
+  console.log("Company login failed:", err.message);
+
+  try {
+    console.log("Trying franchise login...");
+
+    await loginFranchise(identifier, password);
+
+    console.log("Franchise login success");
+
+    navigate("/dashboard");
+  } catch (error) {
+    console.log("Franchise login failed:", error.message);
+
+    setError("Invalid email or password");
+    setLoading(false);
+  }
+}
   };
 
   return (
@@ -119,8 +137,9 @@ const LoginForm = () => {
                   if (value.includes(" ")) {
                     return; // ignore input
                   }
-                  setPassword(value);}
+                  setPassword(value);
                 }
+              }
               placeholder="••••••••"
               required
               disabled={loading}

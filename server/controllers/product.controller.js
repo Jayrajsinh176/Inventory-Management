@@ -109,9 +109,9 @@ const getScopedCategory = async (categoryId, companyId) => {
  */
 export const getProducts = async (req, res) => {
   try {
-    const query = {
-      company: new mongoose.Types.ObjectId(req.user.company)
-    };
+ const query = {
+  company: new mongoose.Types.ObjectId(req.user.company),
+};
 
     if (req.query.category) {
       if (!isValidObjectId(req.query.category)) {
@@ -139,6 +139,28 @@ export const getProducts = async (req, res) => {
       .limit(limit)
       .lean();
 
+    // Business Manager -> Show Location Stock
+// Franchise -> Show only its own stock
+if (req.user.role === "franchise") {
+
+  const locationStocks = await LocationStock.find({
+    company: req.user.company,
+    locationId: req.user.franchise,
+  }).lean();
+
+  const stockMap = {};
+
+  locationStocks.forEach((item) => {
+    stockMap[item.product.toString()] = item.stock;
+  });
+
+  products.forEach((product) => {
+    product.stock = stockMap[product._id.toString()] || 0;
+  });
+}
+
+
+
     const total = await Product.countDocuments(query);
     return res.status(200).json({
       success: true,
@@ -159,19 +181,36 @@ export const getProductById = async (req, res) => {
     if (!isValidObjectId(req.params.id)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid product id"
+        message: "Invalid product id",
       });
     }
 
-    const product = await Product.findOne({
-      _id: req.params.id,
-      company: req.user.company,
-    }).populate("category", "name").populate("vendor", "name").lean();
+ const query = {
+  _id: req.params.id,
+  company: req.user.company,
+};
+
+if (req.user.role === "franchise") {
+  query.$or = [
+    {
+      createdBy: "company",
+    },
+    {
+      createdBy: "franchise",
+      franchise: req.user.franchise,
+    },
+  ];
+}
+
+    const product = await Product.findOne(query)
+      .populate("category", "name")
+      .populate("vendor", "name")
+      .lean();
 
     if (!product) {
       return res.status(404).json({
         success: false,
-        message: "Product not found"
+        message: "Product not found",
       });
     }
 
@@ -279,40 +318,43 @@ export const createProduct = async (req, res) => {
     const image = req.file
       ? `/uploads/products/${req.file.filename}`
       : "";
+const isFranchise = req.user.role === "franchise";
 
-    const product = await Product.create({
-      company: req.user.company,
-      name,
-      sku,
-      // The schema's barcode index is global. Generate a company-specific value
-      // when no barcode was supplied so identical SKUs in different companies do
-      // not collide.
-      barcode: barcode?.trim() || `${req.user.company}-${sku}`,
-      category,
-      price,
-      mrp: mrp ?? price,
-      dp: dp ?? price,
-      bv: bv ?? 0,
-      stock: stock ?? 0,
-      vendor: vendor || null,
-      image,
-      lowStockThreshold: lowStockThreshold ?? 5,
-    });
-
-    // Create initial stock for Main Store
-const mainStore = await Franchise.findOne({
+const product = await Product.create({
   company: req.user.company,
-  isDefault: true,
+
+franchise: isFranchise ? req.user.franchise : null,
+
+  createdBy: isFranchise ? "franchise" : "company",
+
+  name,
+  sku,
+  barcode: barcode?.trim() || `${req.user.company}-${sku}`,
+  category,
+  price,
+  mrp: mrp ?? price,
+  dp: dp ?? price,
+  bv: bv ?? 0,
+  stock: stock ?? 0,
+  vendor: vendor || null,
+  image,
+  lowStockThreshold: lowStockThreshold ?? 5,
 });
 
-if (mainStore) {
-  await LocationStock.create({
-    company: req.user.company,
-    locationId: mainStore._id,
-    product: product._id,
-    stock: stock ?? 0,
-  });
-}
+    // Create initial stock for Main Store
+    const mainStore = await Franchise.findOne({
+      company: req.user.company,
+      isDefault: true,
+    });
+
+    if (mainStore) {
+      await LocationStock.create({
+        company: req.user.company,
+        locationId: mainStore._id,
+        product: product._id,
+        stock: stock ?? 0,
+      });
+    }
 
     await product.populate("category", "name");
 
@@ -357,10 +399,12 @@ export const updateProduct = async (req, res) => {
       return res.status(400).json({ message: "Invalid product id" });
     }
 
-    const product = await Product.findOne({
-      _id: id,
-      company: req.user.company,
-    });
+const query = {
+  _id: id,
+  company: req.user.company,
+};
+
+const product = await Product.findOne(query);
 
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
@@ -507,10 +551,19 @@ export const deleteProduct = async (req, res) => {
       return res.status(400).json({ message: "Invalid product id" });
     }
 
-    const product = await Product.findOneAndDelete({
-      _id: req.params.id,
-      company: req.user.company,
-    });
+    if (req.user.role === "franchise") {
+  return res.status(403).json({
+    success: false,
+    message: "Only the Company Admin can delete products.",
+  });
+}
+
+const query = {
+  _id: req.params.id,
+  company: req.user.company,
+};
+
+const product = await Product.findOneAndDelete(query);
 
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
@@ -585,9 +638,27 @@ function getOutOfStockCount(products) {
 
 export const getProductStats = async (req, res) => {
   try {
-    let query = { company: new mongoose.Types.ObjectId(req.user.company) }
-    // console.log(query);
-    let products = await Product.find(query).lean();
+  let products;
+
+if (req.user.role === "franchise") {
+
+  const stocks = await LocationStock.find({
+    company: req.user.company,
+    locationId: req.user.locationId,
+  }).populate("product");
+
+  products = stocks.map((item) => ({
+    ...item.product.toObject(),
+    stock: item.stock,
+  }));
+
+} else {
+
+  products = await Product.find({
+    company: req.user.company,
+  }).lean();
+
+}
     // console.log(products);
 
 
@@ -621,7 +692,26 @@ export const getProductStats = async (req, res) => {
 export const getLowStock = async (req, res) => {
   try {
     let query = { company: new mongoose.Types.ObjectId(req.user.company) };
-    let products = await Product.find(query).lean();
+  
+   let products;
+
+if (req.user.role === "franchise") {
+
+  const stocks = await LocationStock.find({
+    company: req.user.company,
+    locationId: req.user.locationId,
+  }).populate("product");
+
+  products = stocks.map((item) => ({
+    ...item.product.toObject(),
+    stock: item.stock,
+  }));
+
+} else {
+
+  products = await Product.find(query).lean();
+
+}
     return res.status(200).json({
       success: true,
       "low-stock-products": getLowStockProducts(products),
@@ -667,6 +757,7 @@ export const getProductsByCategory = async (req, res) => {
       company: new mongoose.Types.ObjectId(req.user.company),
       category: new mongoose.Types.ObjectId(req.params.categoryId)
     }
+   
     let products = await Product.find(query).lean();
     return res.status(200).json({
       success: true,
@@ -727,100 +818,117 @@ export const importProducts = async (req, res) => {
     fs.createReadStream(req.file.path)
       .pipe(csv())
       .on("data", (data) => rows.push(data))
-     .on("end", async () => {
-  try {
-    const company = await Company.findById(req.user.company);
+      .on("end", async () => {
+        try {
+          const company = await Company.findById(req.user.company);
 
-    const plan = getSubscriptionPlan(company.plan);
+          const plan = getSubscriptionPlan(company.plan);
 
-    const existingProducts = await Product.countDocuments({
-      company: req.user.company,
-    });
+          const existingProducts = await Product.countDocuments({
+            company: req.user.company,
+          });
 
-    const remainingSlots = Number.isFinite(plan.maxProducts)
-  ? plan.maxProducts - existingProducts
-  : Infinity;
+          const remainingSlots = Number.isFinite(plan.maxProducts)
+            ? plan.maxProducts - existingProducts
+            : Infinity;
 
-   if (
-  Number.isFinite(plan.maxProducts) &&
-  rows.length > remainingSlots
-) {
-  fs.unlinkSync(req.file.path);
+          if (
+            Number.isFinite(plan.maxProducts) &&
+            rows.length > remainingSlots
+          ) {
+            fs.unlinkSync(req.file.path);
 
-  return res.status(403).json({
-    success: false,
-    message: `Your ${company.plan} plan has only ${remainingSlots} product slots remaining, but your CSV contains ${rows.length} products.`,
+            return res.status(403).json({
+              success: false,
+              message: `Your ${company.plan} plan has only ${remainingSlots} product slots remaining, but your CSV contains ${rows.length} products.`,
+            });
+          }
+
+          const importedProducts = [];
+          const errors = [];
+
+          for (const row of rows) {
+            try {
+
+              const category = await Category.findOne({
+                company: req.user.company,
+                name: new RegExp(`^${row.category}$`, "i"),
+              });
+
+              if (!category) {
+                errors.push(
+                  `Category '${row.category}' not found for '${row.name}'`
+                );
+                continue;
+              }
+
+              const existingSku = await Product.findOne({
+                company: req.user.company,
+                sku: row.sku,
+              });
+
+              if (existingSku) {
+                errors.push(`SKU '${row.sku}' already exists`);
+                continue;
+              }
+
+             const isFranchise = req.user.role === "franchise";
+const mainStore = await Franchise.findOne({
+  company: req.user.company,
+  isDefault: true,
+});
+
+if (mainStore) {
+  await LocationStock.create({
+    company: req.user.company,
+    locationId: mainStore._id,
+    product: product._id,
+    stock: Number(row.stock),
   });
 }
+const product = await Product.create({
+  
+  company: req.user.company,
+  franchise: isFranchise ? req.user.franchise : null,
+  createdBy: isFranchise ? "franchise" : "company",
+                name: row.name,
+                sku: row.sku.toUpperCase(),
+                barcode: `${req.user.company}-${row.sku.toUpperCase()}`,
+                category: category._id,
+                price: Number(row.price),
+                mrp: Number(row.mrp),
+                dp: Number(row.dp),
+                bv: Number(row.bv),
+                stock: Number(row.stock),
+                lowStockThreshold: Number(row.lowStockThreshold),
+              });
 
- const importedProducts = [];
-const errors = [];
+              importedProducts.push(product);
 
-for (const row of rows) {
-  try {
+            } catch (err) {
+              errors.push(err.message);
+            }
+          }
 
-    const category = await Category.findOne({
-      company: req.user.company,
-      name: new RegExp(`^${row.category}$`, "i"),
-    });
+          fs.unlinkSync(req.file.path);
 
-    if (!category) {
-      errors.push(
-        `Category '${row.category}' not found for '${row.name}'`
-      );
-      continue;
-    }
-
-    const existingSku = await Product.findOne({
-      company: req.user.company,
-      sku: row.sku,
-    });
-
-    if (existingSku) {
-      errors.push(`SKU '${row.sku}' already exists`);
-      continue;
-    }
-
-    const product = await Product.create({
-      company: req.user.company,
-      name: row.name,
-      sku: row.sku.toUpperCase(),
-      barcode: `${req.user.company}-${row.sku.toUpperCase()}`,
-      category: category._id,
-      price: Number(row.price),
-      mrp: Number(row.mrp),
-      dp: Number(row.dp),
-      bv: Number(row.bv),
-      stock: Number(row.stock),
-      lowStockThreshold: Number(row.lowStockThreshold),
-    });
-
-    importedProducts.push(product);
-
-  } catch (err) {
-    errors.push(err.message);
-  }
-}
-
-fs.unlinkSync(req.file.path);
-
-return res.status(200).json({
-  success: true,
-  message: "Products imported successfully",
-  imported: importedProducts.length,
-  skipped: errors.length,
-  errors,
-});
+          return res.status(200).json({
+            success: true,
+            message: "Products imported successfully",
+            imported: importedProducts.length,
+            skipped: errors.length,
+            errors,
+          });
 
 
 
-  } catch (err) {
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
-});
+        } catch (err) {
+          return res.status(500).json({
+            success: false,
+            message: err.message,
+          });
+        }
+      });
 
   } catch (error) {
     return res.status(500).json({
@@ -853,13 +961,29 @@ export const getProductDetails = async (req, res) => {
     const pageLimit = Math.min(Math.max(Number.parseInt(limit, 10) || 10, 1), 50);
     const skip = (currentPage - 1) * pageLimit;
 
-    const product = await Product.findOne({
-      _id: productId,
-      company: companyId,
-    })
-      .populate("category", "name")
-      .populate("vendor", "name phone email address company status")
-      .lean();
+const productQuery = {
+  _id: productId,
+  company: companyId,
+};
+
+if (req.user.role === "franchise") {
+  productQuery.$or = [
+    {
+      createdBy: "company",
+    },
+    {
+      createdBy: "franchise",
+      franchise: req.user.franchise,
+    },
+  ];
+}
+
+
+
+const product = await Product.findOne(productQuery)
+  .populate("category", "name")
+  .populate("vendor", "name phone email address company status")
+  .lean();
 
     if (!product) {
       return res.status(404).json({
@@ -868,11 +992,16 @@ export const getProductDetails = async (req, res) => {
       });
     }
 
-    const completedProductSaleMatch = {
-      company: companyId,
-      status: "completed",
-      "items.product": productId,
-    };
+const completedProductSaleMatch = {
+    company: companyId,
+    status: "completed",
+    "items.product": productId,
+};
+
+if (req.user.role === "franchise") {
+    completedProductSaleMatch.franchise =
+        new mongoose.Types.ObjectId(req.user.franchise);
+}
 
     const [summaryResult, allSales, allPurchases] = await Promise.all([
       Order.aggregate([
@@ -1106,5 +1235,83 @@ export const getProductDetails = async (req, res) => {
     });
   } catch (error) {
     return handleProductError(res, error);
+  }
+};
+
+export const addStock = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { quantity, reason, notes } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid product id",
+      });
+    }
+
+    if (!quantity || Number(quantity) <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid quantity.",
+      });
+    }
+
+    const query = {
+  _id: id,
+  company: req.user.company,
+};
+
+
+const product = await Product.findOne(query);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found.",
+      });
+    }
+
+    const qty = Number(quantity);
+
+    // Update product stock
+    product.stock += qty;
+
+    await product.save();
+
+    // Business plan → Update Main Store inventory
+    const company = req.user.company;
+
+    const mainStore = await Franchise.findOne({
+      company,
+      isDefault: true,
+    });
+
+    if (mainStore) {
+      const locationStock = await LocationStock.findOne({
+        company,
+        locationId: mainStore._id,
+        product: product._id,
+      });
+
+      if (locationStock) {
+        locationStock.stock += qty;
+        await locationStock.save();
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Stock added successfully.",
+      product,
+    });
+
+  } catch (error) {
+    console.error("Add Stock Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
   }
 };

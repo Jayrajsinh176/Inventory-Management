@@ -30,10 +30,16 @@ if (!isAnalyticsAllowed(company.plan)) {
   });
 }
 
-      const orders = await Order.find({
-        company: companyId,
-        paymentStatus: "paid",
-      }).lean();
+   const orderFilter = {
+  company: companyId,
+  paymentStatus: "paid",
+};
+
+if (req.user.role === "franchise") {
+  orderFilter.franchise = req.user.franchise;
+}
+
+const orders = await Order.find(orderFilter).lean();
 
       const months = [
         "Jan", "Feb", "Mar", "Apr",
@@ -72,9 +78,15 @@ if (!isAnalyticsAllowed(company.plan)) {
         });
       }
 
-      const products = await Product.find({
-        company: companyId,
-      }).lean();
+   const productFilter = {
+  company: companyId,
+};
+
+if (req.user.role === "franchise") {
+  productFilter.franchise = req.user.franchise;
+}
+
+const products = await Product.find(productFilter).lean();
 
       const totalInventoryValue = products.reduce(
         (sum, product) =>
@@ -119,9 +131,15 @@ if (!isAnalyticsAllowed(company.plan)) {
   });
 }
 
-      const products = await Product.find({
-        company: req.user.company,
-      }).populate("category");
+const productFilter = {
+  company: req.user.company,
+};
+
+if (req.user.role === "franchise") {
+  productFilter.franchise = req.user.franchise;
+}
+
+const products = await Product.find(productFilter).populate("category");
 
       const categoryMap = {};
 
@@ -183,9 +201,15 @@ if (!isAnalyticsAllowed(company.plan)) {
   });
 }
 
-      const products = await Product.find({
-        company: req.user.company,
-      });
+const productFilter = {
+  company: req.user.company,
+};
+
+if (req.user.role === "franchise") {
+  productFilter.franchise = req.user.franchise;
+}
+
+const products = await Product.find(productFilter);
 
       const lowStock = products.filter(
         (product) => Number(product.stock) <= 10
